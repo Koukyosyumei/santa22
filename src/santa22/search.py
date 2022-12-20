@@ -1,6 +1,7 @@
 import random
-import tqdm
+
 import numpy as np
+import tqdm
 
 from .cost import total_cost
 from .evaluator import evaluate_config
@@ -78,7 +79,8 @@ def iterate_search(
     for iterations in tqdm.tqdm(range(max_iterations)):
         iterations += 1
         neighbouring_solutions_cost, neighbouring_solution = explore(
-            current_solution, transitions, image_lut)
+            current_solution, transitions, image_lut
+        )
         if neighbouring_solutions_cost < current_solutions_cost:
             print(
                 f"--> Found a better solutions at the {iterations}th interation;"

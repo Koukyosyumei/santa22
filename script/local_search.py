@@ -71,8 +71,7 @@ def main():
         current_solution = [tuple(x) for x in starting_solutions_points]
         current_solutions_cost = starting_solutions_cost
         # plot_traj(starting_solutions_points, image)
-        print(
-            f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
+        print(f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
     else:
         current_solution = saved_solution["solution"]
         current_solutions_cost = saved_solution["cost"]
