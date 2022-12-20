@@ -1,5 +1,5 @@
 import numpy as np
-
+from numba import jit
 from .action import get_position
 from .utils import cartesian_to_array
 
@@ -8,20 +8,24 @@ from .utils import cartesian_to_array
 # he square root of the number of links rotated
 
 
+@jit
 def reconfiguration_cost(from_config, to_config):
     diffs = np.abs(np.asarray(from_config) - np.asarray(to_config)).sum(axis=1)
     assert diffs.max() <= 1
-    return np.sqrt(diffs.sum())
+    return float(np.sqrt(diffs.sum()))
 
 
+@jit
 def color_cost(from_position, to_position, image_, color_scale=3.0):
     """
     Cost of moving from one color to another:
     the sum of the absolute change in color components
     """
-    return np.abs(image_[to_position] - image_[from_position]).sum() * color_scale
+    return float(np.abs(image_[to_position] -
+                        image_[from_position]).sum() * color_scale)
 
 
+@jit
 def step_cost(from_config, to_config, image_):
     """
     Total cost of one step: the reconfiguration cost plus the color cost
@@ -35,6 +39,7 @@ def step_cost(from_config, to_config, image_):
     )
 
 
+@jit
 def total_cost(path, image_):
     """
     Computes total cost of path over image

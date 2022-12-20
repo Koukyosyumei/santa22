@@ -1,10 +1,13 @@
 import numpy as np
+from numba import jit
 
 
+@jit
 def get_position(config):
     return config.sum(0)
 
 
+@jit
 def rotate_link(vector, direction):
     x, y = vector
     if direction == 1:  # counter-clockwise
@@ -28,12 +31,14 @@ def rotate_link(vector, direction):
     return x, y
 
 
+@jit
 def rotate(config, i_, direction):
     config = config.copy()
     config[i_] = rotate_link(config[i_], direction)
     return config
 
 
+@jit
 def compress_path(path):
     """
     Compress a path between two points
@@ -56,6 +61,7 @@ def compress_path(path):
     return r
 
 
+@jit
 def get_direction(u, v):
     """Returns the sign of the angle from u to v."""
     # direction = np.sign(np.cross(u, v))
@@ -65,6 +71,7 @@ def get_direction(u, v):
     return direction
 
 
+@jit
 def get_radius(config):
     r = 0
     for link in config:
@@ -72,6 +79,7 @@ def get_radius(config):
     return r
 
 
+@jit
 def get_radii(config):
     radii = np.cumsum(np.maximum(np.abs(config[:, 0]), np.abs(config[:, 1]))[::-1])[
         ::-1

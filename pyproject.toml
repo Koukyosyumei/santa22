@@ -17,6 +17,7 @@ classifiers = [
 
 dependencies = [
     "pandas",
+    "numba",
     "pytest",
     "flake8",
     "mypy",

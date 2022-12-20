@@ -1,3 +1,7 @@
+from numba import jit
+
+
+@jit
 def dir2idx(dx, dy):
     assert -1 <= dx <= 1 and -1 <= dy <= 1
     assert not (dx == 0 and dy == 0)
@@ -7,6 +11,7 @@ def dir2idx(dx, dy):
     return idx
 
 
+@jit
 def idx2dir(idx):
     assert 0 <= idx < 8
     if idx >= 4:
@@ -16,6 +21,7 @@ def idx2dir(idx):
     return dx, dy
 
 
+@jit
 def idx_2_new_ij(i_, j_, idx):
     dx, dy = idx2dir(idx)
     new_i = i_ - dy
