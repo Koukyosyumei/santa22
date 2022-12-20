@@ -42,8 +42,10 @@ def main():
     output_dir = parsed_args.output_dir
     max_iterations = parsed_args.max_iterations
 
+    image_df = pd.read_csv(os.path.join(data_dir, "image.csv"))
+    # only positive coordinates
+    image_lut = (image_df + np.array([[128, 128, 0, 0, 0]])).to_numpy()
     image = imread(os.path.join(data_dir, "image.png"))
-    print(image.shape)
 
     print(f"Starting search with max iterations: {max_iterations}")
 
@@ -58,8 +60,8 @@ def main():
     except Exception as error:
         print(error)
         print(
-            "No saved solution found, using the solution made by\
-              'make_starting_solution' as the starting solution"
+            "No saved solution found, using the solution made by"
+            "'make_starting_solution' as the starting solution"
         )
         (
             starting_solutions_points,
@@ -69,7 +71,8 @@ def main():
         current_solution = [tuple(x) for x in starting_solutions_points]
         current_solutions_cost = starting_solutions_cost
         # plot_traj(starting_solutions_points, image)
-        print(f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
+        print(
+            f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
     else:
         current_solution = saved_solution["solution"]
         current_solutions_cost = saved_solution["cost"]
@@ -78,7 +81,7 @@ def main():
         )
 
     current_solution, current_solutions_cost = iterate_search(
-        current_solution, current_solutions_cost, max_iterations
+        current_solution, current_solutions_cost, image_lut, max_iterations
     )
 
     check_point(current_solutions_cost, current_solution)

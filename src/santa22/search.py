@@ -1,5 +1,5 @@
 import random
-
+import tqdm
 import numpy as np
 
 from .cost import total_cost
@@ -35,11 +35,14 @@ def make_starting_solution(image_):
     return points_, path_, cost_
 
 
-def explore(current_solution_, transitions):
+def explore(current_solution_, transitions, image_lut):
     try:
         neighbouring_solution_ = current_solution_.copy()
 
-        # Currently, the exploration is performed by swapping the place of two adjacent points; you can come up with other methods to explore the neighbourhood of a solution
+        # Currently, the exploration is performed by swapping
+        # the place of two adjacent points;
+        # you can come up with other methods to explore
+        # the neighbourhood of a solution
         offset = 1
         i_ = random.randint(0, len(neighbouring_solution_) - (offset + 1))
 
@@ -52,7 +55,7 @@ def explore(current_solution_, transitions):
 
             # Compute the cost of transition to the neighbouring solution
             neighbouring_solutions_cost_ = evaluate_config(
-                points_to_path(np.array(neighbouring_solution_))
+                points_to_path(np.array(neighbouring_solution_)), image_lut
             )
 
             return neighbouring_solutions_cost_, neighbouring_solution_
@@ -66,14 +69,16 @@ def explore(current_solution_, transitions):
 def iterate_search(
     current_solution,
     current_solutions_cost,
+    image_lut,
     max_iterations=1000,
     check_pointing_interval=200,
 ):
+    transitions = set()
 
-    iterations = 0
-    while max_iterations > iterations:
+    for iterations in tqdm.tqdm(range(max_iterations)):
         iterations += 1
-        neighbouring_solutions_cost, neighbouring_solution = explore(current_solution)
+        neighbouring_solutions_cost, neighbouring_solution = explore(
+            current_solution, transitions, image_lut)
         if neighbouring_solutions_cost < current_solutions_cost:
             print(
                 f"--> Found a better solutions at the {iterations}th interation;"
