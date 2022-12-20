@@ -1,15 +1,13 @@
 from functools import reduce
 
 import numpy as np
-from numba import jit
+from numba import njit
 
 
-@jit
 def get_position(config):
     return reduce(lambda p, q: (p[0] + q[0], p[1] + q[1]), config, (0, 0))
 
 
-@jit
 def cartesian_to_array(x, y, shape_):
     m, n = shape_[:2]
     i_ = (n - 1) // 2 - y
@@ -19,7 +17,6 @@ def cartesian_to_array(x, y, shape_):
     return i_, j
 
 
-@jit
 def rotate_link(vector, direction):
     x, y = vector
     if direction == 1:  # counter-clockwise
@@ -43,14 +40,12 @@ def rotate_link(vector, direction):
     return x, y
 
 
-@jit
 def rotate(config, i, direction):
     config = config.copy()
     config[i] = rotate_link(config[i], direction)
     return config
 
 
-@jit
 def get_direction(u, v):
     """Returns the sign of the angle from u to v."""
     direction = np.sign(np.cross(u, v))
@@ -59,7 +54,6 @@ def get_direction(u, v):
     return direction
 
 
-@jit
 def get_path_to_point(config, point):
     """Find a path of configurations to `point` starting at `config`."""
     path = [config]
@@ -99,7 +93,6 @@ def get_path_to_point(config, point):
     return path
 
 
-@jit
 def get_path_to_configuration(from_config, to_config):
     path = [from_config]
     config = from_config.copy()
