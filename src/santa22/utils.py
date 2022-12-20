@@ -1,4 +1,5 @@
 import io
+import os
 import pickle
 from itertools import product
 from pathlib import Path
@@ -59,7 +60,9 @@ def imread(path):
 
 def check_point(output_dir, current_solutions_cost_, current_solution_):
     """Makes check-points during the search"""
-    with io.open(output_dir / "current_solution_data.pkl", "wb") as out_file:
+    with io.open(
+        os.path.join(output_dir, "current_solution_data.pkl"), "wb"
+    ) as out_file:
         pickle.dump(
             {"cost": current_solutions_cost_, "solution": current_solution_}, out_file
         )
