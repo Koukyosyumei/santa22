@@ -84,7 +84,7 @@ def main():
         current_solution, current_solutions_cost, image_lut, max_iterations
     )
 
-    check_point(current_solutions_cost, current_solution)
+    check_point(output_dir, current_solutions_cost, current_solution)
 
     optimized_path = points_to_path(np.array(current_solution))
     submission_opt = pd.Series(
