@@ -30,6 +30,12 @@ def add_args(parser):
         default=1000,
         type=int,
     )
+    parser.add_argument(
+        "-c",
+        "--check_pointing_interval",
+        default=200,
+        type=int
+    )
     args = parser.parse_args()
     return args
 
@@ -41,6 +47,7 @@ def main():
     data_dir = parsed_args.data_dir
     output_dir = parsed_args.output_dir
     max_iterations = parsed_args.max_iterations
+    check_pointing_interval = parsed_args.check_pointing_interval
 
     image_df = pd.read_csv(os.path.join(data_dir, "image.csv"))
     # only positive coordinates
@@ -71,7 +78,8 @@ def main():
         current_solution = [tuple(x) for x in starting_solutions_points]
         current_solutions_cost = starting_solutions_cost
         # plot_traj(starting_solutions_points, image)
-        print(f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
+        print(
+            f"Loaded the starting solution with cost: {starting_solutions_cost:.3f}")
     else:
         current_solution = saved_solution["solution"]
         current_solutions_cost = saved_solution["cost"]
@@ -80,7 +88,7 @@ def main():
         )
 
     current_solution, current_solutions_cost = iterate_search(
-        current_solution, current_solutions_cost, image_lut, max_iterations
+        current_solution, current_solutions_cost, image_lut, output_dir, max_iterations, check_pointing_interval
     )
 
     check_point(output_dir, current_solutions_cost, current_solution)

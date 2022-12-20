@@ -107,6 +107,7 @@ def iterate_search(
             print(
                 f"--> Making a check-point of the current best solution with cost: {current_solutions_cost:.3f}"
             )
+            print(output_dir)
             check_point(output_dir, current_solutions_cost, current_solution)
 
     print(
