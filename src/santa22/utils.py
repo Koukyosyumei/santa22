@@ -3,7 +3,7 @@ import os
 import pickle
 from itertools import product
 from pathlib import Path
-
+from numba import jit
 import cv2
 import numpy as np
 import pandas as pd
@@ -11,6 +11,7 @@ import pandas as pd
 # Functions to map between cartesian coordinates and array indexes
 
 
+@jit
 def cartesian_to_array(x, y, shape_):
     m, n = shape_[:2]
     i_ = (n - 1) // 2 - y
@@ -20,6 +21,7 @@ def cartesian_to_array(x, y, shape_):
     return i_, j
 
 
+@jit
 def array_to_cartesian(i_, j, shape_):
     m, n = shape_[:2]
     if i_ < 0 or i_ >= m or j < 0 or j >= n:
@@ -36,13 +38,15 @@ def image_to_dict(image_):
     image_ = np.atleast_3d(image_)
     kv_image = {}
     for i_, j in product(range(len(image_)), repeat=2):
-        kv_image[array_to_cartesian(i_, j, image_.shape)] = tuple(image_[i_, j])
+        kv_image[array_to_cartesian(
+            i_, j, image_.shape)] = tuple(image_[i_, j])
     return kv_image
 
 
 def image_to_df(image_):
     return pd.DataFrame(
-        [(x, y, r, g, b) for (x, y), (r, g, b) in image_to_dict(image_).items()],
+        [(x, y, r, g, b)
+         for (x, y), (r, g, b) in image_to_dict(image_).items()],
         columns=["x", "y", "r", "g", "b"],
     )
 
@@ -64,7 +68,8 @@ def check_point(output_dir, current_solutions_cost_, current_solution_):
         os.path.join(output_dir, "current_solution_data.pkl"), "wb"
     ) as out_file:
         pickle.dump(
-            {"cost": current_solutions_cost_, "solution": current_solution_}, out_file
+            {"cost": current_solutions_cost_,
+                "solution": current_solution_}, out_file
         )
 
 
