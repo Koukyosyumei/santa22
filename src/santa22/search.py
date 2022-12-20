@@ -27,9 +27,10 @@ def make_starting_solution(image_):
     # Generate path
     points_ = np.array(points_)
 
+    print(points_.shape)
+
     # Make path
     path_ = points_to_path(points_)
-
     # Compute cost
     cost_ = total_cost(path_, image_)
 
@@ -44,15 +45,19 @@ def explore(current_solution_, transitions, image_lut):
         # the place of two adjacent points;
         # you can come up with other methods to explore
         # the neighbourhood of a solution
-        offset = 1
-        i_ = random.randint(0, len(neighbouring_solution_) - (offset + 1))
+        offset = 2
+        i_1 = random.randint(0, len(neighbouring_solution_) - (offset + 1))
+        i_2 = i_1 + offset
+        i_3 = i_2 + offset
+        i_4 = i_3 + offset
 
-        if i_ not in transitions:
-            transitions.add(i_)
+        if i_1 not in transitions:
+            transitions.add(i_1)
 
-            t = neighbouring_solution_[i_]
-            neighbouring_solution_[i_] = current_solution_[i_ + offset]
-            neighbouring_solution_[i_ + offset] = t
+            neighbouring_solution_[i_1 + 1] = current_solution_[i_2 + 1]
+            neighbouring_solution_[i_2 + 1] = current_solution_[i_3 + 1]
+            neighbouring_solution_[i_3 + 1] = current_solution_[i_4 + 1]
+            neighbouring_solution_[i_4 + 1] = current_solution_[i_1 + 1]
 
             # Compute the cost of transition to the neighbouring solution
             neighbouring_solutions_cost_ = evaluate_config(
@@ -71,6 +76,7 @@ def iterate_search(
     current_solution,
     current_solutions_cost,
     image_lut,
+    output_dir,
     max_iterations=1000,
     check_pointing_interval=200,
 ):
@@ -81,7 +87,6 @@ def iterate_search(
         neighbouring_solutions_cost, neighbouring_solution = explore(
             current_solution, transitions, image_lut
         )
-        print(neighbouring_solutions_cost)
         if neighbouring_solutions_cost < current_solutions_cost:
             print(
                 f"--> Found a better solutions at the {iterations}th interation;"
@@ -102,7 +107,7 @@ def iterate_search(
             print(
                 f"--> Making a check-point of the current best solution with cost: {current_solutions_cost:.3f}"
             )
-            check_point(current_solutions_cost, current_solution)
+            check_point(output_dir, current_solutions_cost, current_solution)
 
     print(
         f"Search ended after {max_iterations} iterations;"
