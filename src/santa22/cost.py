@@ -45,7 +45,7 @@ def total_cost(path, image_):
     Computes total cost of path over image
 
     """
-    cost = 0
+    cost = 0.0
     for i_ in range(1, len(path)):
         cost += step_cost(path[i_ - 1], path[i_], image_)
     return cost
