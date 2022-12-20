@@ -15,7 +15,7 @@ def get_path_to_point(config, point_):
         link = config[i_]
         base = get_position(config[:i_])
         relbase = point_ - base
-        position = get_position(config[:i_ + 1])
+        position = get_position(config[: i_ + 1])
         relpos = point_ - position
         radius = radii[i_ + 1]
 
@@ -32,9 +32,9 @@ def get_path_to_point(config, point_):
             link = config[i_]
             base = get_position(config[:i_])
             relbase = point_ - base
-            position = get_position(config[:i_ + 1])
+            position = get_position(config[: i_ + 1])
             relpos = point_ - position
-            radius = get_radius(config[i_ + 1:])
+            radius = get_radius(config[i_ + 1 :])
 
     assert (get_position(config) == point_).all()
     path = get_path_to_configuration(config_start, config)
@@ -47,8 +47,7 @@ def get_path_to_configuration(from_config, to_config):
     config = from_config.copy()
     while (config != to_config).any():
         for i_ in range(len(config)):
-            config = rotate(config, i_, get_direction(
-                config[i_], to_config[i_]))
+            config = rotate(config, i_, get_direction(config[i_], to_config[i_]))
         path = np.append(path, np.expand_dims(config, 0), 0)
     assert (path[-1] == to_config).all()
     return path
@@ -59,7 +58,7 @@ def get_origin(size):
     radius = size // 2
     p = [1]
     for power in range(0, 8):
-        p.append(2 ** power)
+        p.append(2**power)
         if sum(p) == radius:
             break
     else:
@@ -78,15 +77,15 @@ def points_to_path(points, size=257):
         if tuple(p) not in visited:
             candy_cane_road = get_path_to_point(config, p)[1:]
             if len(candy_cane_road) > 0:
-                visited |= set([tuple(get_position(r))
-                               for r in candy_cane_road])
+                visited |= set([tuple(get_position(r)) for r in candy_cane_road])
             path.extend(candy_cane_road)
     # Back to origin
     candy_cane_road = get_path_to_configuration(path[-1], origin)[1:]
     visited |= set([tuple(get_position(r)) for r in candy_cane_road])
     path.extend(candy_cane_road)
 
-    assert len(
-        visited) == size ** 2, f'Visited {len(visited)} points out of {size ** 2}'
+    assert (
+        len(visited) == size**2
+    ), f"Visited {len(visited)} points out of {size ** 2}"
 
     return np.array(path)

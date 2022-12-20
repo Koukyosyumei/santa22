@@ -13,9 +13,9 @@ def cost_fun(config, rgb_path):
     and the corresponding visited
     colors of the path as input and returns
     the scalar float cost"""
-    return np.sqrt(np.abs(config[:-1, :, :] -
-                          config[1:, :, :]).sum(axis=-1).sum(axis=-1)).sum() + \
-        (3.0 * np.abs(rgb_path[:-1, :] - rgb_path[1:, :]).sum())
+    return np.sqrt(
+        np.abs(config[:-1, :, :] - config[1:, :, :]).sum(axis=-1).sum(axis=-1)
+    ).sum() + (3.0 * np.abs(rgb_path[:-1, :] - rgb_path[1:, :]).sum())
 
 
 def evaluate_config(config, image_lut):

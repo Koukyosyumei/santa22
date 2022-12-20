@@ -1,5 +1,4 @@
 import numpy as np
-
 from action import get_position
 from utils import cartesian_to_array
 
@@ -19,8 +18,7 @@ def color_cost(from_position, to_position, image_, color_scale=3.0):
     Cost of moving from one color to another:
     the sum of the absolute change in color components
     """
-    return np.abs(image_[to_position] -
-                  image_[from_position]).sum() * color_scale
+    return np.abs(image_[to_position] - image_[from_position]).sum() * color_scale
 
 
 def step_cost(from_config, to_config, image_):
@@ -31,8 +29,9 @@ def step_cost(from_config, to_config, image_):
     pos_to = get_position(to_config)
     from_position = cartesian_to_array(pos_from[0], pos_from[1], image_.shape)
     to_position = cartesian_to_array(pos_to[0], pos_to[1], image_.shape)
-    return (reconfiguration_cost(from_config, to_config) +
-            color_cost(from_position, to_position, image_))
+    return reconfiguration_cost(from_config, to_config) + color_cost(
+        from_position, to_position, image_
+    )
 
 
 def total_cost(path, image_):

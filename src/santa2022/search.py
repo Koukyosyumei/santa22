@@ -1,9 +1,11 @@
+import random
 
 import numpy as np
-from .evaluator import evaluate_config
+
 from .cost import total_cost
+from .evaluator import evaluate_config
 from .path import points_to_path
-import random
+from .utils import check_point
 
 
 def make_starting_solution(image_):
@@ -50,11 +52,53 @@ def explore(current_solution_, transitions):
 
             # Compute the cost of transition to the neighbouring solution
             neighbouring_solutions_cost_ = evaluate_config(
-                points_to_path(np.array(neighbouring_solution_)))
+                points_to_path(np.array(neighbouring_solution_))
+            )
 
             return neighbouring_solutions_cost_, neighbouring_solution_
         else:
-            return 10 ** 6, current_solution_
+            return 10**6, current_solution_
     except Exception as error_:
         print(error_)
-        return 10 ** 6, current_solution_
+        return 10**6, current_solution_
+
+
+def iterate_search(
+    current_solution,
+    current_solutions_cost,
+    max_iterations=1000,
+    check_pointing_interval=200,
+):
+
+    iterations = 0
+    while max_iterations > iterations:
+        iterations += 1
+        neighbouring_solutions_cost, neighbouring_solution = explore(current_solution)
+        if neighbouring_solutions_cost < current_solutions_cost:
+            print(
+                f"--> Found a better solutions at the {iterations}th interation;"
+                f" the improvement by transitioning to the better solution was:"
+                f" {current_solutions_cost - neighbouring_solutions_cost}"
+            )
+            current_solutions_cost = neighbouring_solutions_cost
+            current_solution = neighbouring_solution
+            transitions = set()
+        else:
+            pass
+
+        if iterations % 100 == 0:
+            print(f"--> {iterations} neighbours have been explored")
+
+        # save the best points every 1k iterations
+        if iterations % check_pointing_interval == 0:
+            print(
+                f"--> Making a check-point of the current best solution with cost: {current_solutions_cost:.3f}"
+            )
+            check_point(current_solutions_cost, current_solution)
+
+    print(
+        f"Search ended after {max_iterations} iterations;"
+        f" the cost of the new best solution found during the search was: {current_solutions_cost:.3f}"
+    )
+
+    return current_solution, current_solutions_cost

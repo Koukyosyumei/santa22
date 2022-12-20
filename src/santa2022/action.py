@@ -40,13 +40,13 @@ def compress_path(path):
     """
     n_joints = path.shape[1]
     r = np.zeros((n_joints, path.shape[0], 2), dtype=path.dtype)
-    l = np.zeros(n_joints, dtype='int')
+    l = np.zeros(n_joints, dtype="int")
     for j in range(len(path)):
         for i_ in range(n_joints):
             if l[i_] == 0 or (r[i_][l[i_] - 1] != path[j, i_]).any():
                 r[i_, l[i_]] = path[j, i_]
                 l[i_] += 1
-    r = r[:, :l.max()]
+    r = r[:, : l.max()]
 
     for i_ in range(n_joints):
         for j in range(l[i_], r.shape[1]):
@@ -73,6 +73,7 @@ def get_radius(config):
 
 
 def get_radii(config):
-    radii = np.cumsum(np.maximum(
-        np.abs(config[:, 0]), np.abs(config[:, 1]))[::-1])[::-1]
-    return np.append(radii, np.zeros(1, dtype='int'))
+    radii = np.cumsum(np.maximum(np.abs(config[:, 0]), np.abs(config[:, 1]))[::-1])[
+        ::-1
+    ]
+    return np.append(radii, np.zeros(1, dtype="int"))

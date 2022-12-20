@@ -17,9 +17,9 @@ def plot_traj(points, image_):
     for l in lines:
         dist = np.abs(l[0] - l[1]).max()
         if dist <= 2:
-            colors.append('b')
+            colors.append("b")
         else:
-            colors.append('r')
+            colors.append("r")
 
     lc = mc.LineCollection(lines, colors=colors)
 
@@ -28,8 +28,10 @@ def plot_traj(points, image_):
     ax.add_collection(lc)
 
     radius = image_.shape[0] // 2
-    ax.matshow(image_ * 0.8 + 0.2, extent=(-radius - 0.5,
-               radius + 0.5, -radius - 0.5, radius + 0.5))
+    ax.matshow(
+        image_ * 0.8 + 0.2,
+        extent=(-radius - 0.5, radius + 0.5, -radius - 0.5, radius + 0.5),
+    )
     ax.grid(None)
 
     ax.autoscale()
