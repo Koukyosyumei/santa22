@@ -14,13 +14,13 @@ from .utils import (
 
 
 class TopKStorage:
-    def __init__(self, k=10):
+    def __init__(self, k=3):
         self.k = k
         self.list_point = []
         self.list_score = []
 
     def push(self, point, score):
-        if len(self.data < self.k):
+        if len(self.list_point) < self.k:
             self.list_point.append(point)
             self.list_score.append(score)
         else:
@@ -161,6 +161,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         # Otherwise, find the nearest unvisited point and go there ignoring the travel map:
         else:
             # Search every single pixel of the travel map for unvisited points:
+            storage = TopKStorage()
             for i in range(side):
                 for j in range(side):
                     if unvisited[(i, j)]:
@@ -170,10 +171,13 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                             (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
                         )
                         if distance2 < distance:
+                            storage.push((i - radius, j - radius), distance2)
                             point = (i - radius, j - radius)
                             distance = distance2
 
             # Go to the nearest unvisited point:
+            if random.random() < epsilon:
+                point = storage.sample()
             path = get_path_to_point(config, point)[1:]
 
             # Output shortest trajectory:
