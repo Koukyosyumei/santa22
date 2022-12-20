@@ -81,6 +81,7 @@ def iterate_search(
         neighbouring_solutions_cost, neighbouring_solution = explore(
             current_solution, transitions, image_lut
         )
+        print(neighbouring_solutions_cost)
         if neighbouring_solutions_cost < current_solutions_cost:
             print(
                 f"--> Found a better solutions at the {iterations}th interation;"
