@@ -1,7 +1,6 @@
 from functools import reduce
 
 import numpy as np
-from numba import njit
 
 
 def get_position(config):

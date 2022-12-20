@@ -1,22 +1,18 @@
 import numpy as np
-from numba import jit
 
 from .utils import cartesian_to_array, get_position
 
 
-@jit
 def reconfiguration_cost(from_config, to_config):
     diffs = np.abs(np.asarray(from_config) - np.asarray(to_config)).sum(axis=1)
     assert diffs.max() <= 1
     return float(np.sqrt(diffs.sum()))
 
 
-@jit
 def color_cost(from_position, to_position, image, color_scale=3.0):
     return np.abs(image[to_position] - image[from_position]).sum() * color_scale
 
 
-@jit
 def step_cost(from_config, to_config, image_):
     """
     Total cost of one step: the reconfiguration cost plus the color cost
@@ -30,7 +26,6 @@ def step_cost(from_config, to_config, image_):
     )
 
 
-@jit
 def total_cost(path, image_):
     """
     Computes total cost of path over image
