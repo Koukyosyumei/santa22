@@ -1,6 +1,8 @@
 import numpy as np
+from numba import jit
 
 
+@jit
 def pos2lut_idx(pos):
     """Convert positions in the range of [-128, 128]
     into row index for the RGB-LUT"""
@@ -8,6 +10,7 @@ def pos2lut_idx(pos):
     return transformed_pos[:, 0] + (256 - transformed_pos[:, 1]) * 257
 
 
+@jit
 def cost_fun(config, rgb_path):
     """This cost function takes the configuration matrix
     and the corresponding visited
@@ -18,6 +21,7 @@ def cost_fun(config, rgb_path):
     ).sum() + (3.0 * np.abs(rgb_path[:-1, :] - rgb_path[1:, :]).sum())
 
 
+@jit
 def evaluate_config(config, image_lut):
     """Generates the RGB-path from the configuration
     matrix and calls the cost function"""
