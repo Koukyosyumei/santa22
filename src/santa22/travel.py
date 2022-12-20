@@ -1,4 +1,5 @@
 import os
+import random
 
 import numpy as np
 
@@ -12,7 +13,32 @@ from .utils import (
 )
 
 
-def travel_map(df_image, output_dir):
+class TopKStorage:
+    def __init__(self, k=10):
+        self.k = k
+        self.list_point = []
+        self.list_score = []
+
+    def push(self, point, score):
+        if len(self.data < self.k):
+            self.list_point.append(point)
+            self.list_score.append(score)
+        else:
+            max_idx = np.argmax(self.list_score)
+            self.list_point.pop(max_idx)
+            self.list_point.append(point)
+            self.list_score.pop(max_idx)
+            self.list_score.append(score)
+
+    def clear(self):
+        self.list_point = []
+        self.list_score = []
+
+    def sample(self):
+        return random.choice(self.list_point)
+
+
+def travel_map(df_image, output_dir, epsilon=0.0):
 
     path_result = []
 
@@ -90,26 +116,27 @@ def travel_map(df_image, output_dir):
                     cost = cost2
                     found = True
 
-        # Double-link step:
-        for i in range(len(origin) - 1):
-            for d1 in [-1, 1]:
-                for j in range(i + 1, len(origin)):
-                    for d2 in [-1, 1]:
-                        # Rotate two separate links, get position and vertical displacement:
-                        config2 = rotate(config, i, d1)
-                        config2 = rotate(config2, j, d2)
-                        pos = get_position(config2)
-                        dy = pos[1] - base[1]
+        if below == 0:
+            # Double-link step:
+            for i in range(len(origin) - 1):
+                for d1 in [-1, 1]:
+                    for j in range(i + 1, len(origin)):
+                        for d2 in [-1, 1]:
+                            # Rotate two separate links, get position and vertical displacement:
+                            config2 = rotate(config, i, d1)
+                            config2 = rotate(config2, j, d2)
+                            pos = get_position(config2)
+                            dy = pos[1] - base[1]
 
-                        # Convert from cartesian to array coordinates and measure cost:
-                        pos_arr = (pos[0] + radius, pos[1] + radius)
-                        cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
+                            # Convert from cartesian to array coordinates and measure cost:
+                            pos_arr = (pos[0] + radius, pos[1] + radius)
+                            cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
 
-                        # Must move down unless impossible:
-                        if unvisited[pos_arr] and cost2 < cost and below == 0:
-                            config_next = config2.copy()
-                            cost = cost2
-                            found = True
+                            # Must move down unless impossible:
+                            if unvisited[pos_arr] and cost2 < cost and below == 0:
+                                config_next = config2.copy()
+                                cost = cost2
+                                found = True
 
         # If an unvisited point was found, we are done for this step:
         if found:
