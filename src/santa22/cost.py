@@ -1,31 +1,22 @@
 import numpy as np
-from numba import jit, njit
-from .action import get_position
-from .utils import cartesian_to_array
+from numba import jit
 
-# Functions to compute the cost function
-# Cost of reconfiguring the robotic arm: t
-# he square root of the number of links rotated
+from .utils import cartesian_to_array, get_position
 
 
-@njit
+@jit
 def reconfiguration_cost(from_config, to_config):
     diffs = np.abs(np.asarray(from_config) - np.asarray(to_config)).sum(axis=1)
     assert diffs.max() <= 1
     return float(np.sqrt(diffs.sum()))
 
 
-@njit
-def color_cost(from_position, to_position, image_, color_scale=3.0):
-    """
-    Cost of moving from one color to another:
-    the sum of the absolute change in color components
-    """
-    return float(np.abs(image_[to_position] -
-                        image_[from_position]).sum() * color_scale)
+@jit
+def color_cost(from_position, to_position, image, color_scale=3.0):
+    return np.abs(image[to_position] - image[from_position]).sum() * color_scale
 
 
-@njit
+@jit
 def step_cost(from_config, to_config, image_):
     """
     Total cost of one step: the reconfiguration cost plus the color cost
@@ -39,11 +30,10 @@ def step_cost(from_config, to_config, image_):
     )
 
 
-@njit
+@jit
 def total_cost(path, image_):
     """
     Computes total cost of path over image
-
     """
     cost = 0.0
     for i_ in range(1, len(path)):
