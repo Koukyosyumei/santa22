@@ -45,7 +45,7 @@ def local_search_2opt(config, image_lut, max_itr=10):
         )
         current_score = evaluate_config(config_new, image_lut)
         if current_score < best_score:
-            print(current_score)
+            print(current_score, offset)
             best_score = current_score
             config = config_new
 
