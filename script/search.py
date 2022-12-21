@@ -69,7 +69,7 @@ def main():
         with open(parsed_args.initial_path, mode="rb") as f:
             path_result = pickle.load(f)
 
-    path_result_improved = local_search_2opt(path_result, image_lut, 1000)
+    path_result_improved = local_search_2opt(np.array(path_result), image_lut, 1000)
     save_config(parsed_args.output_dir, "sample_improved.csv", path_result_improved)
 
 
