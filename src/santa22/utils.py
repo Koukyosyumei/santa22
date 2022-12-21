@@ -12,6 +12,29 @@ def get_position(config):
 
 
 @njit
+def compress_path(path):
+    """
+    Compress a path between two points
+    """
+    n_joints = path.shape[1]
+    r = np.zeros((n_joints, path.shape[0], 2), dtype=path.dtype)
+    ll = np.zeros(n_joints, dtype="int")
+    for j in range(len(path)):
+        for i_ in range(n_joints):
+            if ll[i_] == 0 or (r[i_][ll[i_] - 1] != path[j, i_]).any():
+                r[i_, ll[i_]] = path[j, i_]
+                ll[i_] += 1
+    r = r[:, : ll.max()]
+
+    for i_ in range(n_joints):
+        for j in range(ll[i_], r.shape[1]):
+            r[i_, j] = r[i_, j - 1]
+    r = r.transpose(1, 0, 2)
+
+    return r
+
+
+@njit
 def cartesian_to_array(x, y, shape_):
     m, n = shape_[:2]
     i_ = (n - 1) // 2 - y
@@ -114,6 +137,7 @@ def get_path_to_point(config, point_):
 
     assert (get_position(config) == point_).all()
     path = get_path_to_configuration(config_start, config)
+    path = compress_path(path)
 
     return path
 
@@ -127,6 +151,7 @@ def get_path_to_configuration(from_config, to_config):
             config = rotate(config, i_, get_direction(config[i_], to_config[i_]))
         path = np.append(path, np.expand_dims(config, 0), 0)
     assert (path[-1] == to_config).all()
+    path = compress_path(path)
     return path
 
 

@@ -10,9 +10,11 @@ def reconfiguration_cost(from_config, to_config):
     assert diffs.max() <= 1
     return float(np.sqrt(diffs.sum()))
 
+
 @njit
 def color_cost(from_position, to_position, image, color_scale=3.0):
     return np.abs(image[to_position] - image[from_position]).sum() * color_scale
+
 
 @njit
 def step_cost(from_config, to_config, image_):
@@ -26,6 +28,7 @@ def step_cost(from_config, to_config, image_):
     return reconfiguration_cost(from_config, to_config) + color_cost(
         from_position, to_position, image_
     )
+
 
 @njit
 def total_cost(path, image_):

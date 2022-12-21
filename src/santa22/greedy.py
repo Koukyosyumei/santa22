@@ -180,7 +180,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                         # Measure the distance to the current point and choose the nearest one:
                         distance2 = np.sqrt(
                             (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
-                        )
+                        )  # + color_cost(base_arr, (i, j), image, color_scale=0.1)
                         if distance2 < distance:
                             storage.push((i - radius, j - radius), distance2)
                             point = (i - radius, j - radius)
