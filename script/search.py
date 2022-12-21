@@ -7,7 +7,7 @@ import numpy as np
 import pandas as pd
 
 from santa22.greedy import travel_map
-from santa22.local_search import local_search_2opt
+from santa22.local_search import local_search
 from santa22.utils import save_config
 
 
@@ -67,6 +67,7 @@ def main():
     parsed_args = add_args(parser)
 
     random.seed(parsed_args.seed)
+    np.random.seed(parsed_args.seed)
 
     df = pd.read_csv(os.path.join(parsed_args.data_dir, "image.csv"))
     image_lut = df_to_imagelut(df)
@@ -81,7 +82,7 @@ def main():
         with open(parsed_args.initial_path, mode="rb") as f:
             path_result = pickle.load(f)
 
-    path_result_improved, updated_flag = local_search_2opt(
+    path_result_improved, updated_flag = local_search(
         np.array(path_result),
         image_lut,
         parsed_args.max_itr,
