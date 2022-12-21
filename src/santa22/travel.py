@@ -16,26 +16,27 @@ from .utils import (
 class TopKStorage:
     def __init__(self, k=3):
         self.k = k
-        self.list_point = []
+        self.list_obj = []
         self.list_score = []
 
-    def push(self, point, score):
-        if len(self.list_point) < self.k:
-            self.list_point.append(point)
+    def push(self, obj, score):
+        if len(self.list_obj) < self.k:
+            self.list_obj.append(obj)
             self.list_score.append(score)
         else:
-            max_idx = np.argmax(self.list_score)
-            self.list_point.pop(max_idx)
-            self.list_point.append(point)
-            self.list_score.pop(max_idx)
-            self.list_score.append(score)
+            if score < np.max(self.list_score):
+                max_idx = np.argmax(self.list_score)
+                self.list_obj.pop(max_idx)
+                self.list_obj.append(obj)
+                self.list_score.pop(max_idx)
+                self.list_score.append(score)
 
     def clear(self):
-        self.list_point = []
+        self.list_obj = []
         self.list_score = []
 
     def sample(self):
-        return random.choice(self.list_point)
+        return random.choice(self.list_obj)
 
 
 def travel_map(df_image, output_dir, epsilon=0.0):
@@ -94,6 +95,8 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         else:
             below = unvisited[(base_arr[0], base_arr[1] - 1)]
 
+        storage = TopKStorage()
+
         # Single-link step:
         for i in range(len(origin)):  # for each arm link
             for d in [-1, 1]:  # for each direction
@@ -107,6 +110,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 cost2 = 1 + color_cost(base_arr, pos_arr, image)
 
                 # Must move down unless impossible:
+                storage.push(config2.copy(), cost2)
                 if (
                     unvisited[pos_arr]
                     and cost2 < cost
@@ -133,6 +137,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                             cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
 
                             # Must move down unless impossible:
+                            storage.push(config2.copy(), cost2)
                             if unvisited[pos_arr] and cost2 < cost and below == 0:
                                 config_next = config2.copy()
                                 cost = cost2
@@ -140,7 +145,10 @@ def travel_map(df_image, output_dir, epsilon=0.0):
 
         # If an unvisited point was found, we are done for this step:
         if found:
-            config = config_next.copy()
+            if random.random() < epsilon:
+                config = storage.sample()
+            else:
+                config = config_next.copy()
             pos = get_position(config)
             total -= 1
 
