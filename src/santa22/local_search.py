@@ -8,7 +8,8 @@ from .utils import get_path_to_configuration
 
 
 def local_search_2opt(config, image_lut, max_itr=10):
-    best_score = evaluate_config(config, image_lut)
+    initial_score = evaluate_config(config, image_lut)
+    best_score = initial_score
     print("initial score is ", best_score)
 
     for _ in tqdm(range(max_itr)):
@@ -36,4 +37,4 @@ def local_search_2opt(config, image_lut, max_itr=10):
             config = config_new
 
     print("improved score is ", best_score)
-    return config
+    return config, initial_score > best_score

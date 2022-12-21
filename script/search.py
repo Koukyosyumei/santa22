@@ -41,6 +41,12 @@ def add_args(parser):
         type=float,
     )
     parser.add_argument(
+        "-i",
+        "--max_itr",
+        default=100000,
+        type=int,
+    )
+    parser.add_argument(
         "-s",
         "--seed",
         default=42,
@@ -69,8 +75,16 @@ def main():
         with open(parsed_args.initial_path, mode="rb") as f:
             path_result = pickle.load(f)
 
-    path_result_improved = local_search_2opt(np.array(path_result), image_lut, 10000)
+    path_result_improved, updated_flag = local_search_2opt(
+        np.array(path_result), image_lut, parsed_args.max_itr
+    )
     save_config(parsed_args.output_dir, "sample_improved.csv", path_result_improved)
+
+    if updated_flag:
+        with open(
+            os.path.join(parsed_args.output_dir, "initial_path.pickle"), mode="wb"
+        ) as f:
+            pickle.dump(path_result_improved, f)
 
 
 if __name__ == "__main__":
