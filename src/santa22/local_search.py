@@ -6,6 +6,19 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration
 
+offset_choice = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+offset_choice_weight = [
+    0.5,
+    0.25,
+    0.125,
+    0.0625,
+    0.0125,
+    0.0125,
+    0.0125,
+    0.0125,
+    0.0125,
+]
+
 
 def local_search_2opt(config, image_lut, max_itr=10):
     initial_score = evaluate_config(config, image_lut)
@@ -13,7 +26,7 @@ def local_search_2opt(config, image_lut, max_itr=10):
     print("initial score is ", best_score)
 
     for _ in tqdm(range(max_itr)):
-        offset = random.randint(1, 10)
+        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
         i = random.randint(0, len(config) - (3 + offset))
         c_1 = config[i]
         c_4 = config[i + 2 + offset]
