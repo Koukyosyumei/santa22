@@ -129,6 +129,5 @@ def get_path_to_configuration(from_config, to_config):
     assert (path[-1] == to_config).all()
     return path
 
-@njit
 def config_to_string(config):
     return ";".join([" ".join(map(str, vector)) for vector in config])
