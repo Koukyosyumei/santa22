@@ -155,5 +155,45 @@ def get_path_to_configuration(from_config, to_config):
     return path
 
 
+def get_origin(size):
+    assert size % 2 == 1
+    radius = size // 2
+    p = [1]
+    for power in range(0, 8):
+        p.append(2**power)
+        if sum(p) == radius:
+            break
+    else:
+        assert False
+    p = p[::-1]
+    config = np.array([(p[0], 0)] + [(-pp, 0) for pp in p[1:]])
+    return config
+
+
+def points_to_path(points, size=257):
+    origin = get_origin(size)
+    visited = set()
+    path = [origin]
+    for p in points:
+        config = path[-1]
+        if tuple(p) not in visited:
+            candy_cane_road = get_path_to_point(np.array(config), np.array(p))[1:]
+            if len(candy_cane_road) > 0:
+                visited |= set(
+                    [tuple(get_position(np.array(r))) for r in candy_cane_road]
+                )
+            path.extend(candy_cane_road)
+    # Back to origin
+    candy_cane_road = get_path_to_configuration(np.array(path[-1]), origin)[1:]
+    visited |= set([tuple(get_position(np.array(r))) for r in candy_cane_road])
+    path.extend(candy_cane_road)
+
+    assert (
+        len(visited) == size**2
+    ), f"Visited {len(visited)} points out of {size ** 2}"
+
+    return np.array(path)
+
+
 def config_to_string(config):
     return ";".join([" ".join(map(str, vector)) for vector in config])

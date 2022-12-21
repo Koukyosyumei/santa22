@@ -7,6 +7,7 @@ import pandas as pd
 
 from santa22.cost import total_cost
 from santa22.greedy import travel_map
+from santa22.utils import points_to_path
 
 
 def df_to_image(df):
@@ -52,9 +53,12 @@ def main():
     df = pd.read_csv(os.path.join(parsed_args.data_dir, "image.csv"))
     image = df_to_image(df)
 
-    path_result = travel_map(df, parsed_args.output_dir, parsed_args.epsilon)
+    path_result, points_result = travel_map(
+        df, parsed_args.output_dir, parsed_args.epsilon
+    )
 
     print(total_cost(np.array(path_result), image))
+    # print(total_cost(points_to_path(points_result), image))
 
 
 if __name__ == "__main__":
