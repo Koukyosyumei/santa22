@@ -6,17 +6,11 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration
 
-offset_choice = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+offset_choice = [1, 2, 3]
 offset_choice_weight = [
-    0.5,
-    0.25,
-    0.125,
-    0.0625,
-    0.0125,
-    0.0125,
-    0.0125,
-    0.0125,
-    0.0125,
+    0.7,
+    0.2,
+    0.1,
 ]
 
 

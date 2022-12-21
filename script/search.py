@@ -36,7 +36,13 @@ def add_args(parser):
     )
     parser.add_argument(
         "-e",
-        "--epsilon",
+        "--epsilon_greedy",
+        default=0.0,
+        type=float,
+    )
+    parser.add_argument(
+        "-r",
+        "--epsilon_local_search",
         default=0.0,
         type=float,
     )
@@ -66,7 +72,7 @@ def main():
     image_lut = df_to_imagelut(df)
 
     if parsed_args.initial_path is None:
-        path_result = travel_map(df, parsed_args.output_dir, parsed_args.epsilon)
+        path_result = travel_map(df, parsed_args.output_dir, parsed_args.epsilon_greedy)
         with open(
             os.path.join(parsed_args.output_dir, "initial_path.pickle"), mode="wb"
         ) as f:
@@ -76,7 +82,9 @@ def main():
             path_result = pickle.load(f)
 
     path_result_improved, updated_flag = local_search_2opt(
-        np.array(path_result), image_lut, parsed_args.max_itr
+        np.array(path_result),
+        image_lut,
+        parsed_args.max_itr,
     )
     save_config(parsed_args.output_dir, "sample_improved.csv", path_result_improved)
 
