@@ -45,7 +45,6 @@ class TopKStorage:
 def travel_map(df_image, output_dir, epsilon=0.0):
 
     path_result = []
-    points_result = []
 
     side = df_image.x.nunique()
     radius = df_image.x.max()
@@ -74,7 +73,6 @@ def travel_map(df_image, output_dir, epsilon=0.0):
     f = open(os.path.join(output_dir, "submission.csv"), "w")
     print("configuration", file=f)  # header
     print(config_to_string(origin), file=f)  # origin configuration
-    # points_result.append(get_position(np.array(origin.copy())))
     path_result.append(origin.copy())
 
     # Output arrows for visualization:
@@ -159,7 +157,6 @@ def travel_map(df_image, output_dir, epsilon=0.0):
 
             # Print configuration and arrows:
             print(config_to_string(config), file=f)
-            points_result.append((pos[0], pos[1]))
             path_result.append(config.copy())
             print(
                 base[0],
@@ -206,7 +203,6 @@ def travel_map(df_image, output_dir, epsilon=0.0):
 
                 # Print configuration and arrows:
                 print(config_to_string(config), file=f)
-                points_result.append((pos[0], pos[1]))
                 path_result.append(config.copy())
                 print(
                     base[0],
@@ -240,4 +236,4 @@ def travel_map(df_image, output_dir, epsilon=0.0):
     f.close()
     a.close()
 
-    return path_result, points_result
+    return path_result

@@ -1,3 +1,4 @@
+import os
 from functools import reduce
 
 import numpy as np
@@ -197,3 +198,10 @@ def points_to_path(points, size=257):
 
 def config_to_string(config):
     return ";".join([" ".join(map(str, vector)) for vector in config])
+
+
+def save_config(output_dir, file_name, config):
+    f = open(os.path.join(output_dir, file_name), "w")
+    print("configuration", file=f)  # header
+    for c in config:
+        print(config_to_string(c), file=f)
