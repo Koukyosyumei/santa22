@@ -8,11 +8,11 @@ from .utils import get_path_to_configuration
 
 
 def local_search_2opt(config, image_lut, max_itr=10):
-    offset = random.randint(1, 10)
     best_score = evaluate_config(config, image_lut)
     print("initial score is ", best_score)
 
     for _ in tqdm(range(max_itr)):
+        offset = random.randint(1, 10)
         i = random.randint(0, len(config) - (3 + offset))
         c_1 = config[i]
         c_4 = config[i + 2 + offset]
@@ -31,6 +31,7 @@ def local_search_2opt(config, image_lut, max_itr=10):
         )
         current_score = evaluate_config(config_new, image_lut)
         if current_score < best_score:
+            print(current_score)
             best_score = current_score
             config = config_new
 
