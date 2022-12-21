@@ -38,6 +38,9 @@ class TopKStorage:
     def sample(self):
         return random.choice(self.list_obj)
 
+    def empty(self):
+        return len(self.list_obj) == 0
+
 
 def travel_map(df_image, output_dir, epsilon=0.0):
 
@@ -95,7 +98,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         else:
             below = unvisited[(base_arr[0], base_arr[1] - 1)]
 
-        storage = TopKStorage()
+        # storage = TopKStorage()
 
         # Single-link step:
         for i in range(len(origin)):  # for each arm link
@@ -110,12 +113,12 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 cost2 = 1 + color_cost(base_arr, pos_arr, image)
 
                 # Must move down unless impossible:
-                storage.push(config2.copy(), cost2)
                 if (
                     unvisited[pos_arr]
                     and cost2 < cost
                     and (dy < 0 or (dy >= 0 and below == 0))
                 ):
+                    # storage.push(config2.copy(), cost2)
                     config_next = config2.copy()
                     cost = cost2
                     found = True
@@ -137,18 +140,18 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                             cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
 
                             # Must move down unless impossible:
-                            storage.push(config2.copy(), cost2)
                             if unvisited[pos_arr] and cost2 < cost and below == 0:
+                                # storage.push(config2.copy(), cost2)
                                 config_next = config2.copy()
                                 cost = cost2
                                 found = True
 
         # If an unvisited point was found, we are done for this step:
         if found:
-            if random.random() < epsilon:
-                config = storage.sample()
-            else:
-                config = config_next.copy()
+            # if random.random() < epsilon and (not storage.empty()):
+            #    config = storage.sample()
+            # else:
+            config = config_next.copy()
             pos = get_position(config)
             total -= 1
 
@@ -184,7 +187,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                             distance = distance2
 
             # Go to the nearest unvisited point:
-            if random.random() < epsilon:
+            if random.random() < epsilon and (not storage.empty()):
                 point = storage.sample()
             path = get_path_to_point(config, point)[1:]
 
