@@ -5,7 +5,7 @@ import random
 import pandas as pd
 
 from santa22.cost import total_cost
-from santa22.travel import travel_map
+from santa22.greedy import travel_map
 
 
 def df_to_image(df):
