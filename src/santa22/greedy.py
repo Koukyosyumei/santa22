@@ -88,7 +88,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         found = False
 
         # Current configuration:
-        base = get_position(config)
+        base = get_position(np.array(config))
         base_arr = (base[0] + radius, base[1] + radius)
         unvisited[base_arr] = 0
 
@@ -104,8 +104,8 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         for i in range(len(origin)):  # for each arm link
             for d in [-1, 1]:  # for each direction
                 # Rotate link and get new position and vertical displacement:
-                config2 = rotate(config, i, d)
-                pos = get_position(config2)
+                config2 = rotate(np.array(config), i, d)
+                pos = get_position(np.array(config2))
                 dy = pos[1] - base[1]
 
                 # Convert from cartesian to array coordinates and measure cost:
@@ -130,9 +130,9 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                     for j in range(i + 1, len(origin)):
                         for d2 in [-1, 1]:
                             # Rotate two separate links, get position and vertical displacement:
-                            config2 = rotate(config, i, d1)
-                            config2 = rotate(config2, j, d2)
-                            pos = get_position(config2)
+                            config2 = rotate(np.array(config), i, d1)
+                            config2 = rotate(np.array(config2), j, d2)
+                            pos = get_position(np.array(config2))
                             dy = pos[1] - base[1]
 
                             # Convert from cartesian to array coordinates and measure cost:
@@ -152,7 +152,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
             #    config = storage.sample()
             # else:
             config = config_next.copy()
-            pos = get_position(config)
+            pos = get_position(np.array(config))
             total -= 1
 
             # Print configuration and arrows:
@@ -189,11 +189,11 @@ def travel_map(df_image, output_dir, epsilon=0.0):
             # Go to the nearest unvisited point:
             if random.random() < epsilon and (not storage.empty()):
                 point = storage.sample()
-            path = get_path_to_point(config, point)[1:]
+            path = get_path_to_point(np.array(config), np.array(point))[1:]
 
             # Output shortest trajectory:
             for config in path:
-                pos = get_position(config)
+                pos = get_position(np.array(config))
                 pos_arr = (pos[0] + radius, pos[1] + radius)
 
                 # Update the travel map:
@@ -217,12 +217,12 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 base = pos
 
     # Return to origin:
-    base = get_position(config)
-    path = get_path_to_configuration(config, origin)[1:]
+    base = get_position(np.array(config))
+    path = get_path_to_configuration(np.array(config), np.array(origin))[1:]
 
     # Output return trajectory:
     for config in path:
-        pos = get_position(config)
+        pos = get_position(np.array(config))
 
         # Print configuration and arrows:
         print(config_to_string(config), file=f)

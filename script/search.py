@@ -2,6 +2,7 @@ import argparse
 import os
 import random
 
+import numpy as np
 import pandas as pd
 
 from santa22.cost import total_cost
@@ -53,7 +54,7 @@ def main():
 
     path_result = travel_map(df, parsed_args.output_dir, parsed_args.epsilon)
 
-    print(total_cost(path_result, image))
+    print(total_cost(np.array(path_result), image))
 
 
 if __name__ == "__main__":
