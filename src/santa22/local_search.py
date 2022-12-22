@@ -7,12 +7,9 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration
 
-offset_choice = [1, 2, 3]
-offset_choice_weight = [
-    0.7,
-    0.2,
-    0.1,
-]
+offset_choice = [1, 2, 3, 4, 5, 6, 7]
+offset_choice_weight_near = [0.7, 0.2, 0.02, 0.02, 0.02, 0.02, 0.02]
+offset_choice_weight_far = [0.1, 0.2, 0.3, 0.2, 0.1, 0.05, 0.05]
 
 
 def four_opt(config, offset):
@@ -88,8 +85,11 @@ def local_search(config, image_lut, max_itr=10):
     best_score = initial_score
     print("initial score is ", best_score)
 
-    for _ in tqdm(range(max_itr)):
-        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
+    for itr in tqdm(range(max_itr)):
+        if itr > 300000:
+            offset = random.choices(offset_choice, weights=offset_choice_weight_near)[0]
+        else:
+            offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
 
         config_new = two_opt(config, offset)
 
