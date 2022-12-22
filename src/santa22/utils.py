@@ -196,6 +196,47 @@ def points_to_path(points, size=257):
     return np.array(path)
 
 
+def find_duplicate_points(path):
+
+    duplicate_points = {}
+    for c in path:
+        p = tuple(get_position(c))
+        if p != (0, 0):
+            duplicate_points[p] = duplicate_points.get(p, 0) + 1
+
+    return duplicate_points
+
+
+def vector_diff_one(path):
+
+    for i in range(len(path) - 1):
+        for c0, c1 in zip(path[i], path[i + 1]):
+            if abs(c0[0] - c1[0]) + abs(c0[1] - c1[1]) > 1:
+                return False
+
+    return True
+
+
+def run_remove(path):
+    duplicate_points = find_duplicate_points(path)
+
+    i = len(path) - 2
+    while i >= 0:
+        local_p = path[i : i + 3]
+        p = tuple(get_position(local_p[1]))
+        new_local_p = compress_path(local_p)
+        if (
+            vector_diff_one(new_local_p)
+            and duplicate_points.get(p, 0) > 1
+            and len(new_local_p) < 3
+        ):
+            path = np.concatenate((path[: i + 1], path[i + 2 :]))
+            duplicate_points[p] -= 1
+        i -= 1
+
+    return path
+
+
 def config_to_string(config):
     return ";".join([" ".join(map(str, vector)) for vector in config])
 

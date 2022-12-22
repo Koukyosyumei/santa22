@@ -6,7 +6,7 @@ from numba import njit
 from tqdm import tqdm
 
 from .cost import evaluate_config
-from .utils import get_path_to_configuration
+from .utils import get_path_to_configuration, run_remove
 
 offset_choice = [1, 2, 3, 4, 5, 6, 7]
 offset_choice_weight_near = [0.7, 0.2, 0.02, 0.02, 0.02, 0.02, 0.02]
@@ -89,6 +89,7 @@ def two_opt(config, offset, image_lut):
 
 
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
+    config = run_remove(config)
     initial_score = evaluate_config(config, image_lut)
     best_score = initial_score
     print("initial score is ", best_score)
@@ -109,6 +110,7 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
             config = config_new
 
         if itr % 10000 == 0:
+            config = run_remove(config)
             print(best_score)
 
     print("improved score is ", best_score)
