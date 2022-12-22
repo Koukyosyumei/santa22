@@ -58,6 +58,16 @@ def add_args(parser):
         default=42,
         type=int,
     )
+    parser.add_argument(
+        "--t_start",
+        default=0.3,
+        type=float,
+    )
+    parser.add_argument(
+        "--t_end",
+        default=0.01,
+        type=float,
+    )
     args = parser.parse_args()
     return args
 
@@ -86,6 +96,8 @@ def main():
         np.array(path_result),
         image_lut,
         parsed_args.max_itr,
+        parsed_args.t_start,
+        parsed_args.t_end
     )
     save_config(parsed_args.output_dir, "sample_improved.csv", path_result_improved)
 
