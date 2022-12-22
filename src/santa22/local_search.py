@@ -58,7 +58,7 @@ def four_opt(config, offset):
 
 
 @njit
-def two_opt(config, offset):
+def two_opt(config, offset, image_lut):
     i = random.randint(0, len(config) - (3 + offset))
 
     c_1 = config[i]
@@ -77,7 +77,11 @@ def two_opt(config, offset):
         (config[:i], c_13, c_32[1:], c_24[1:], config[i + 3 + offset :])
     )
 
-    return config_new
+    improve = evaluate_config(
+        np.concatenate((c_13, c_32[1:], c_24[1:])), image_lut
+    ) - evaluate_config(config[i : i + 3 + offset], image_lut)
+
+    return config_new, improve
 
 
 def local_search(config, image_lut, max_itr=10):
@@ -86,18 +90,21 @@ def local_search(config, image_lut, max_itr=10):
     print("initial score is ", best_score)
 
     for itr in tqdm(range(max_itr)):
-        if itr > 300000:
+        if itr < 300000:
             offset = random.choices(offset_choice, weights=offset_choice_weight_near)[0]
         else:
             offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
 
-        config_new = two_opt(config, offset)
+        config_new, improve = two_opt(config, offset, image_lut)
 
-        current_score = evaluate_config(config_new, image_lut)
-        if current_score < best_score:
-            print(current_score, offset)
-            best_score = current_score
+        # current_score = evaluate_config(config_new, image_lut)
+        if improve < 0:  # current_score < best_score:
+            # print(best_score + improve, offset)
+            best_score = best_score + improve
             config = config_new
+
+        if itr % 10000 == 0:
+            print(best_score)
 
     print("improved score is ", best_score)
     return config, initial_score > best_score
