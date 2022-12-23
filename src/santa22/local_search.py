@@ -201,7 +201,7 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
 
-        if improve_flag and itr % 3 != 1:
+        if improve_flag and itr % 3 != 0:
             print(f"{itr},{offset}", file=f)
 
         if improve_score != 0:
