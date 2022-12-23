@@ -8,20 +8,8 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration, run_remove
 
-offset_choice = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-offset_choice_weight_near = [
-    0.5,
-    0.3,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-    0.2 / 8,
-]
-offset_choice_weight_far = [1 / 10 for _ in range(10)]
+offset_choice = list(range(15))
+offset_choice_weight = [1 / 15 for _ in range(15)]
 
 
 def four_opt(config, offset):
@@ -115,10 +103,18 @@ def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
 
     if d0 > d1:
         # ABCD -> ACBD
-        return np.concatenate((config[: i - 1], p_AC, p_BD, config[j + 1 :])), -d0 + d1
+        return (
+            np.concatenate((config[: i - 1], p_AC, p_BD, config[j + 1 :])),
+            -d0 + d1,
+            True,
+        )
     elif d0 > d2:
         # CDEF -> CEDF
-        return np.concatenate((config[: j - 1], p_CE, p_DF, config[k + 1 :])), -d0 + d2
+        return (
+            np.concatenate((config[: j - 1], p_CE, p_DF, config[k + 1 :])),
+            -d0 + d2,
+            True,
+        )
     elif d0 > d4:
         # ABCDEF -> AEDCBF
         return (
@@ -132,20 +128,23 @@ def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
                 )
             ),
             -d0 + d4,
+            True,
         )
     elif d0 > d3:
         # ABCDEF -> ADEBCF
         return (
             np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
             -d0 + d3,
+            True,
         )
     elif random.random() < calc_threshold(d0 - d3, t_start, t_end, itr, max_itr):
         return (
             np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
             -d0 + d3,
+            False,
         )
 
-    return config, 0
+    return config, 0, False
 
 
 @njit
@@ -172,9 +171,10 @@ def two_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
         return (
             np.concatenate((config[:i], p_AC, p_CB[1:], p_BD[1:], config[j + 1 :])),
             -d0 + d1,
+            d0 > d1,
         )
 
-    return config, 0
+    return config, 0, False
 
 
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
@@ -183,31 +183,33 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     best_score = initial_score
     print("initial score is ", best_score)
 
+    f = open("offset.csv", "w")
+
     for itr in tqdm(range(max_itr)):
-        if itr < 1000000:
-            offset = 1
-        elif itr < 2000000:
-            offset = random.choices(offset_choice, weights=offset_choice_weight_near)[0]
-        else:
-            offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
+        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
 
         if itr % 3 == 0:
-            config_new, improve = three_opt(
+            config_new, improve_score, improve_flag = three_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
         else:
-            config_new, improve = two_opt(
+            config_new, improve_score, improve_flag = two_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
 
-        if improve != 0:
-            best_score = best_score + improve
+        if improve_flag:
+            print(f"{itr}, {offset}", file=f)
+
+        if improve_score != 0:
+            best_score = best_score + improve_score
             config = config_new
 
         if (itr + 1) % 500000 == 0:
             config = run_remove(config)
             best_score = evaluate_config(config, image_lut)
             print(best_score)
+
+    f.close()
 
     config = run_remove(config)
     final_score = evaluate_config(config, image_lut)
