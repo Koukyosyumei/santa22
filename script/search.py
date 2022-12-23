@@ -65,7 +65,7 @@ def add_args(parser):
     )
     parser.add_argument(
         "--t_end",
-        default=0.01,
+        default=0.001,
         type=float,
     )
     args = parser.parse_args()
@@ -97,7 +97,7 @@ def main():
         image_lut,
         parsed_args.max_itr,
         parsed_args.t_start,
-        parsed_args.t_end
+        parsed_args.t_end,
     )
     save_config(parsed_args.output_dir, "sample_improved.csv", path_result_improved)
 

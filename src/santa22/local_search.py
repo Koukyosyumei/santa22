@@ -8,9 +8,20 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration, run_remove
 
-offset_choice = [1, 2, 3, 4, 5, 6, 7]
-offset_choice_weight_near = [0.7, 0.2, 0.02, 0.02, 0.02, 0.02, 0.02]
-offset_choice_weight_far = [1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7, 1 / 7]
+offset_choice = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+offset_choice_weight_near = [
+    0.5,
+    0.3,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+    0.2 / 8,
+]
+offset_choice_weight_far = [1 / 10 for _ in range(10)]
 
 
 def four_opt(config, offset):
@@ -65,7 +76,7 @@ def calc_threshold(improve, t_start, t_final, current_itr, max_itr):
 
 
 @njit
-def three_opt(config, image_lut):
+def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
     offset = 1  # TODO support larger offset
 
     i = random.randint(1, len(config) - (3 + 2 * offset))
@@ -128,12 +139,17 @@ def three_opt(config, image_lut):
             np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
             -d0 + d3,
         )
+    elif random.random() < calc_threshold(d0 - d3, t_start, t_end, itr, max_itr):
+        return (
+            np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
+            -d0 + d3,
+        )
 
     return config, 0
 
 
 @njit
-def two_opt(config, offset, image_lut):
+def two_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
     i = random.randint(1, len(config) - (3 + offset))
     j = i + 1 + offset
 
@@ -150,7 +166,9 @@ def two_opt(config, offset, image_lut):
 
     p_CB = config[i:j][::-1]
 
-    if d0 > d1:
+    if d0 > d1 or random.random() < calc_threshold(
+        d0 - d1, t_start, t_end, itr, max_itr
+    ):
         return (
             np.concatenate((config[:i], p_AC, p_CB[1:], p_BD[1:], config[j + 1 :])),
             -d0 + d1,
@@ -159,7 +177,7 @@ def two_opt(config, offset, image_lut):
     return config, 0
 
 
-def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
+def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     config = run_remove(config)
     initial_score = evaluate_config(config, image_lut)
     best_score = initial_score
@@ -167,25 +185,28 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
 
     for itr in tqdm(range(max_itr)):
         if itr < 1000000:
+            offset = 1
+        elif itr < 2000000:
             offset = random.choices(offset_choice, weights=offset_choice_weight_near)[0]
         else:
             offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
 
         if itr % 3 == 0:
-            config_new, improve = three_opt(config, image_lut)
+            config_new, improve = three_opt(
+                config, offset, image_lut, t_start, t_end, itr, max_itr
+            )
         else:
-            config_new, improve = two_opt(config, offset, image_lut)
+            config_new, improve = two_opt(
+                config, offset, image_lut, t_start, t_end, itr, max_itr
+            )
 
-        if improve < 0 or (
-            improve > 0
-            and random.random()
-            < calc_threshold(improve * -1, t_start, t_end, itr, max_itr)
-        ):
+        if improve != 0:
             best_score = best_score + improve
             config = config_new
 
-        if itr % 500000 == 0:
+        if (itr + 1) % 500000 == 0:
             config = run_remove(config)
+            best_score = evaluate_config(config, image_lut)
             print(best_score)
 
     config = run_remove(config)
