@@ -49,7 +49,7 @@ def calc_threshold(improve, t_start, t_final, current_itr, max_itr):
 
 @njit
 def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
-    offset = 1  # TODO support larger offset
+    # offset = 1  # TODO support larger offset
 
     i = random.randint(1, len(config) - (3 + 2 * offset))
     j = i + offset + 1
@@ -88,14 +88,30 @@ def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
     if d0 > d1:
         # ABCD -> ACBD
         return (
-            np.concatenate((config[: i - 1], p_AC, p_BD, config[j + 1 :])),
+            np.concatenate(
+                (
+                    config[: i - 1],
+                    p_AC,
+                    config[i + 1 : j - 1][::-1],
+                    p_BD,
+                    config[j + 1 :],
+                )
+            ),
             -d0 + d1,
             True,
         )
     elif d0 > d2:
         # CDEF -> CEDF
         return (
-            np.concatenate((config[: j - 1], p_CE, p_DF, config[k + 1 :])),
+            np.concatenate(
+                (
+                    config[: j - 1],
+                    p_CE,
+                    config[j + 1 : k - 1][::-1],
+                    p_DF,
+                    config[k + 1 :],
+                )
+            ),
             -d0 + d2,
             True,
         )
@@ -106,7 +122,9 @@ def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
                 (
                     config[: i - 1],
                     p_EA[::-1],
+                    config[j + 1 : k - 1][::-1],
                     config[j - 1 : j + 1][::-1],
+                    config[i + 1 : j - 1][::-1],
                     p_FB[::-1],
                     config[k + 1 :],
                 )
@@ -117,13 +135,33 @@ def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
     elif d0 > d3:
         # ABCDEF -> ADEBCF
         return (
-            np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
+            np.concatenate(
+                (
+                    config[: i - 1],
+                    p_AD,
+                    config[j + 1 : k - 1],
+                    p_EB,
+                    config[i + 1 : j - 1],
+                    p_CF,
+                    config[k + 1 :],
+                )
+            ),
             -d0 + d3,
             True,
         )
     elif random.random() < calc_threshold(d0 - d3, t_start, t_end, itr, max_itr):
         return (
-            np.concatenate((config[: i - 1], p_AD, p_EB, p_CF, config[k + 1 :])),
+            np.concatenate(
+                (
+                    config[: i - 1],
+                    p_AD,
+                    config[j + 1 : k - 1],
+                    p_EB,
+                    config[i + 1 : j - 1],
+                    p_CF,
+                    config[k + 1 :],
+                )
+            ),
             -d0 + d3,
             False,
         )
@@ -174,9 +212,9 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
     for itr in tqdm(range(max_itr)):
         # offset = two_opts_offsets[itr % two_opts_offsets_len]
-        offset = random.randint(1, 20)
+        offset = random.randint(1, 3)
 
-        if itr % 3 == 0:
+        if True:  # itr % 3 == 0:
             config_new, improve_score, improve_flag = three_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
@@ -192,8 +230,8 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
             best_score = best_score + improve_score
             config = config_new
 
-        if itr < 0.8 * max_itr and random.random() < 0.00001:
-            config = double_bridge(config)
+        # if itr < 0.8 * max_itr and random.random() < 0.00001:
+        #    config = double_bridge(config)
 
         if (itr + 1) % 500000 == 0:
             config = run_remove(config)
