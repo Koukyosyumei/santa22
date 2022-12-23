@@ -212,9 +212,9 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
     for itr in tqdm(range(max_itr)):
         # offset = two_opts_offsets[itr % two_opts_offsets_len]
-        offset = random.randint(1, 3)
+        offset = random.randint(1, 15)
 
-        if True:  # itr % 3 == 0:
+        if itr % 3 == 0:
             config_new, improve_score, improve_flag = three_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
