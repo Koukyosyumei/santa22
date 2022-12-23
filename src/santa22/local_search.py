@@ -134,26 +134,29 @@ def three_opt(config, image_lut):
 
 @njit
 def two_opt(config, offset, image_lut):
-    i = random.randint(0, len(config) - (3 + offset))
+    i = random.randint(1, len(config) - (3 + offset))
+    j = i + 1 + offset
 
-    c_32 = config[i + 1 : i + 2 + offset][::-1]
-    c_13 = get_path_to_configuration(config[i], c_32[0])
-    c_24 = get_path_to_configuration(c_32[-1], config[i + 2 + offset])
+    p_AC = get_path_to_configuration(config[i - 1], config[j - 1])
+    p_BD = get_path_to_configuration(config[i], config[j])
 
-    # assert config[i].tolist() == c_13[0].tolist()
-    # assert c_13[-1].tolist() == c_32[0].tolist()
-    # assert c_32[-1].tolist() == c_24[0].tolist()
-    # assert c_24[-1].tolist() == config[i + 2 + offset].tolist()
+    d_AB = evaluate_config(config[i - 1 : i + 1], image_lut)
+    d_CD = evaluate_config(config[j - 1 : j + 1], image_lut)
+    d_AC = evaluate_config(p_AC, image_lut)
+    d_BD = evaluate_config(p_BD, image_lut)
 
-    config_new = np.concatenate(
-        (config[:i], c_13, c_32[1:], c_24[1:], config[i + 3 + offset :])
-    )
+    d0 = d_AB + d_CD
+    d1 = d_AC + d_BD
 
-    improve = evaluate_config(
-        np.concatenate((c_13, c_32[1:], c_24[1:])), image_lut
-    ) - evaluate_config(config[i : i + 3 + offset], image_lut)
+    p_CB = config[i:j][::-1]
 
-    return config_new, improve
+    if d0 > d1:
+        return (
+            np.concatenate((config[:i], p_AC, p_CB[1:], p_BD[1:], config[j + 1 :])),
+            -d0 + d1,
+        )
+
+    return config, 0
 
 
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
@@ -168,15 +171,17 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
         else:
             offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
 
-        config_new, improve = three_opt(config, image_lut)
+        config_new, improve = two_opt(config, offset, image_lut)
 
-        if improve < 0 or random.random() < calc_threshold(
-            improve * -1, t_start, t_end, itr, max_itr
+        if improve < 0 or (
+            improve > 0
+            and random.random()
+            < calc_threshold(improve * -1, t_start, t_end, itr, max_itr)
         ):
             best_score = best_score + improve
             config = config_new
 
-        if itr % 100000 == 0:
+        if itr % 10000 == 0:
             # config = run_remove(config)
             print(best_score)
 
