@@ -183,10 +183,14 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     best_score = initial_score
     print("initial score is ", best_score)
 
+    # two_opts_offsets_len = 20
+    # two_opts_offsets = [1 + i * 3 for i in range(two_opts_offsets_len)]
+
     f = open("offset.csv", "w")
 
     for itr in tqdm(range(max_itr)):
-        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
+        # offset = two_opts_offsets[itr % two_opts_offsets_len]
+        offset = random.randint(1, 20)
 
         if itr % 3 == 0:
             config_new, improve_score, improve_flag = three_opt(
@@ -197,8 +201,8 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
 
-        if improve_flag:
-            print(f"{itr}, {offset}", file=f)
+        if improve_flag and itr % 3 != 1:
+            print(f"{itr},{offset}", file=f)
 
         if improve_score != 0:
             best_score = best_score + improve_score
