@@ -171,7 +171,10 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
         else:
             offset = random.choices(offset_choice, weights=offset_choice_weight_far)[0]
 
-        config_new, improve = two_opt(config, offset, image_lut)
+        if itr % 3 == 0:
+            config_new, improve = three_opt(config, image_lut)
+        else:
+            config_new, improve = two_opt(config, offset, image_lut)
 
         if improve < 0 or (
             improve > 0
@@ -181,8 +184,8 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
             best_score = best_score + improve
             config = config_new
 
-        if itr % 10000 == 0:
-            # config = run_remove(config)
+        if itr % 500000 == 0:
+            config = run_remove(config)
             print(best_score)
 
     config = run_remove(config)
