@@ -104,8 +104,7 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
 
         if improve < 0 or random.random() < calc_threshold(
             improve * -1, t_start, t_end, itr, max_itr
-        ):  # current_score < best_score:
-            # print(best_score + improve, offset)
+        ):
             best_score = best_score + improve
             config = config_new
 
@@ -113,5 +112,8 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.01):
             config = run_remove(config)
             print(best_score)
 
-    print("improved score is ", best_score)
-    return config, initial_score > best_score
+    config = run_remove(config)
+    final_score = evaluate_config(config, image_lut)
+
+    print("improved score is ", final_score)
+    return config, initial_score > final_score
