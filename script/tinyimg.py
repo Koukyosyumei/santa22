@@ -1,10 +1,12 @@
 import cv2
+import matplotlib.collections as mc
+import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
 from tqdm import tqdm
 
-offset = 2
-color_weight = 0.3
+offset = 1
+color_weight = 0.3  # 0.3
 
 
 def _create_weighted_graph(costMatrix: list):
@@ -215,10 +217,98 @@ def _merge_two_graphs(graph1: nx.Graph, graph2: nx.Graph):
     return mergedGraph
 
 
+def _duplicate_weighted_graph(graph: nx.Graph):
+    """
+    重み付けグラフの辺を2重化する
+
+    Parameters
+    ----------
+    graph : networkx.Graph
+        重み付けグラフ
+
+    Returns
+    -------
+    duplicatedGraph : networkx.MultiGraph
+        引数の重み付けグラフの辺を2重化した重み付けグラフ
+    """
+
+    # 重み付けグラフを初期化して引数のグラフの各辺を2重化
+    duplicatedGraph = nx.MultiGraph()
+    for v in graph:
+        for w in graph[v]:
+            duplicatedGraph.add_edge(v, w, weight=graph[v][w]["weight"])
+
+    return duplicatedGraph
+
+
+def double_tree_algorithm(costMatrix: list, start: int):
+    """
+    2重木アルゴリズムで近似巡回ルートを生成する
+
+    Parameters
+    ----------
+    costMatrix : list
+        完全グラフのコスト行列
+    start : int
+        近似巡回ルートのスタート地点
+
+    Returns
+    -------
+    route : list
+        近似巡回ルート
+    """
+
+    # 1. コスト行列から重み付き完全グラフを生成
+    graph = _create_weighted_graph(costMatrix)
+    print(1)
+    # 2. Primのアルゴリズムで最小全域木を生成
+    spanningTree = nx.minimum_spanning_tree(graph, algorithm="prim")
+    print(2)
+    # 3. 最小全域木の各辺を2重化
+    duplicatedSpanningTree = _duplicate_weighted_graph(spanningTree)
+    print(3)
+    # 4. 2重化した最小全域木からオイラー路を生成
+    eulerianPath = _create_eulerian_path(duplicatedSpanningTree, start)
+    print(4)
+    # 5. オイラー路からハミルトン閉路を生成
+    route = _create_hamiltonian_path(eulerianPath)
+    print(5)
+    # 6. ハミルトン閉路を出力して終了
+    return route
+
+
+def plot_traj(points_, image_, filename_):
+    points = [np.array(((p % 64), p // 64)) for p in points_]
+    lines = []
+    for i_ in range(1, len(points)):
+        lines.append([points[i_ - 1], points[i_]])
+
+    colors = []
+    for l in lines:
+        dist = np.abs(l[0] - l[1]).max()
+        if dist <= 2:
+            colors.append("b")
+        else:
+            colors.append("r")
+
+    lc = mc.LineCollection(lines, colors=colors)
+
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111)
+    ax.add_collection(lc)
+
+    ax.matshow(image_)
+    ax.grid(None)
+
+    ax.autoscale()
+    fig.savefig(filename_)
+
+
 def main():
-    img = cv2.imread("data/img_tiny.png")
+    img = cv2.imread("data/img_tiny.png") / 255
+    print(img.max())
     num_points = img.shape[0] * img.shape[1]
-    cost_matrix = np.zeros((num_points, num_points))
+    cost_matrix = np.ones((num_points, num_points)) * 10000
 
     for i in tqdm(range(img.shape[0])):
         for j in range(img.shape[1]):
@@ -229,7 +319,13 @@ def main():
                         (i - i_) ** 2 + (j - j_) ** 2
                     ) + color_weight * np.sum(np.abs(img[i, j] - img[i_, j_]))
 
-    route = christofides_algorithm(cost_matrix, 0)
+    route = double_tree_algorithm(
+        cost_matrix, 32 * 64 + 32)
+    )
+    plot_traj(route, img, "a.png")
+    plot_traj(route[:100], img, "b.png")
+    plot_traj(route[:1000], img, "c.png")
+    plot_traj(route[3000:], img, "d.png")
 
     print(route)
 
