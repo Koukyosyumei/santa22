@@ -1,0 +1,6 @@
+set terminal jpeg size 5000,5000
+set output '../output/plot.png'
+set key autotitle columnhead
+set datafile separator ','
+set size ratio -1
+plot '../data/image.csv' u 1:2:($3*256):($4*256):($5*256) w rgbimage, '../output/arrows.csv' u 1:2:3:4 w vectors
