@@ -3,7 +3,7 @@ import random
 from tqdm import tqdm
 
 from .cost import evaluate_config
-from .tsp import double_bridge, three_opt, two_opt
+from .tsp import double_bridge, three_opt, two_opt, two_opt_greedy
 from .utils import run_remove
 
 offset_choice = list(range(1, 21))
@@ -33,6 +33,7 @@ offset_choice_weight = [
 
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     config = run_remove(config)
+    config = two_opt_greedy(config, image_lut)
     initial_score = evaluate_config(config, image_lut)
     current_score = initial_score
     best_score = initial_score

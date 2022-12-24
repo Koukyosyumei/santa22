@@ -3,10 +3,12 @@ import matplotlib.collections as mc
 import matplotlib.pyplot as plt
 import networkx as nx
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 
 offset = 1
 color_weight = 0.3  # 0.3
+INF = 1e6
 
 
 def _create_weighted_graph(costMatrix: list):
@@ -28,7 +30,8 @@ def _create_weighted_graph(costMatrix: list):
     graph = nx.Graph()
     for i in range(len(costMatrix)):
         for j in range(i + 1, len(costMatrix[i])):
-            graph.add_edge(i, j, weight=costMatrix[i][j])
+            if costMatrix[i][j] != INF:
+                graph.add_edge(i, j, weight=costMatrix[i][j])
 
     return graph
 
@@ -277,8 +280,7 @@ def double_tree_algorithm(costMatrix: list, start: int):
     return route
 
 
-def plot_traj(points_, image_, filename_):
-    points = [np.array(((p % 64), p // 64)) for p in points_]
+def plot_traj(points, image_, filename_):
     lines = []
     for i_ in range(1, len(points)):
         lines.append([points[i_ - 1], points[i_]])
@@ -308,26 +310,29 @@ def main():
     img = cv2.imread("data/img_tiny.png") / 255
     print(img.max())
     num_points = img.shape[0] * img.shape[1]
-    cost_matrix = np.ones((num_points, num_points)) * 10000
+    cost_matrix = np.ones((num_points, num_points)) * INF
 
     for i in tqdm(range(img.shape[0])):
         for j in range(img.shape[1]):
             pos = i + j * img.shape[1]
             for i_ in range(max(0, i - offset), min(i + offset + 1, img.shape[0])):
                 for j_ in range(max(0, j - offset), min(j + offset + 1, img.shape[1])):
-                    cost_matrix[pos, i_ + j_ * img.shape[1]] = np.sqrt(
-                        (i - i_) ** 2 + (j - j_) ** 2
-                    ) + color_weight * np.sum(np.abs(img[i, j] - img[i_, j_]))
+                    assert abs(i - i_) in [0, 1]
+                    assert abs(j - j_) in [0, 1]
+                    if i != i_ or j != j_:
+                        cost_matrix[pos, i_ + j_ * img.shape[1]] = np.sqrt(
+                            (i - i_) ** 2 + (j - j_) ** 2
+                        ) + color_weight * np.sum(np.abs(img[i, j] - img[i_, j_]))
 
-    route = double_tree_algorithm(
-        cost_matrix, 32 * 64 + 32)
-    )
-    plot_traj(route, img, "a.png")
-    plot_traj(route[:100], img, "b.png")
-    plot_traj(route[:1000], img, "c.png")
-    plot_traj(route[3000:], img, "d.png")
+    route = double_tree_algorithm(cost_matrix, 32 * 64 + 32)
+    points = [np.array(((p // 64), p % 64)) for p in route]
 
-    print(route)
+    plot_traj(points, img, "a.png")
+    plot_traj(points[:100], img, "b.png")
+    plot_traj(points[:1000], img, "c.png")
+    plot_traj(points[3000:], img, "d.png")
+
+    pd.DataFrame(np.array(points)).to_csv("doule_tree_64x64.csv", index=False)
 
 
 if __name__ == "__main__":
