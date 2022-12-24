@@ -8,8 +8,29 @@ from tqdm import tqdm
 from .cost import evaluate_config
 from .utils import get_path_to_configuration, run_remove
 
-offset_choice = list(range(15))
-offset_choice_weight = [1 / 15 for _ in range(15)]
+offset_choice = list(range(1, 21))
+offset_choice_weight = [
+    0.30095489,
+    0.18505104,
+    0.04412249,
+    0.08791571,
+    0.08034244,
+    0.05795193,
+    0.04543958,
+    0.02041488,
+    0.01448798,
+    0.0250247,
+    0.02765887,
+    0.02403688,
+    0.0154758,
+    0.01679289,
+    0.00889035,
+    0.01053671,
+    0.00724399,
+    0.01514653,
+    0.00823181,
+    0.00428054,
+]
 
 
 @njit
@@ -205,14 +226,12 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     best_score = initial_score
     print("initial score is ", best_score)
 
-    # two_opts_offsets_len = 20
-    # two_opts_offsets = [1 + i * 3 for i in range(two_opts_offsets_len)]
-
     f = open("offset.csv", "w")
 
+    tolerance_cnt = 0
+
     for itr in tqdm(range(max_itr)):
-        # offset = two_opts_offsets[itr % two_opts_offsets_len]
-        offset = random.randint(1, 15)
+        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
 
         if itr % 3 == 0:
             config_new, improve_score, improve_flag = three_opt(
@@ -223,15 +242,18 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
 
-        if improve_flag and itr % 3 != 0:
+        if improve_flag:
             print(f"{itr},{offset}", file=f)
+            tolerance_cnt = 0
 
         if improve_score != 0:
             best_score = best_score + improve_score
             config = config_new
+            tolerance_cnt += 1
 
-        # if itr < 0.8 * max_itr and random.random() < 0.00001:
-        #    config = double_bridge(config)
+        if tolerance_cnt > 500000:
+            config = double_bridge(config)
+            tolerance_cnt = 0
 
         if (itr + 1) % 500000 == 0:
             config = run_remove(config)

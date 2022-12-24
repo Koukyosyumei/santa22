@@ -4,6 +4,7 @@ import random
 import numpy as np
 
 from .cost import color_cost
+from .unionfind import UnionFind
 from .utils import (
     config_to_string,
     get_path_to_configuration,
@@ -43,6 +44,8 @@ class TopKStorage:
 
 
 def travel_map(df_image, output_dir, epsilon=0.0):
+
+    utree = UnionFind(df_image.shape[0])
 
     path_result = []
 
@@ -117,6 +120,12 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                     unvisited[pos_arr]
                     and cost2 < cost
                     and (dy < 0 or (dy >= 0 and below == 0))
+                    and (
+                        not utree.same(
+                            (pos_arr[0]) * side + (pos_arr[1]),
+                            (base_arr[0]) * side + (base_arr[1]),
+                        )
+                    )
                 ):
                     # storage.push(config2.copy(), cost2)
                     config_next = config2.copy()
@@ -140,7 +149,17 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                             cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
 
                             # Must move down unless impossible:
-                            if unvisited[pos_arr] and cost2 < cost and below == 0:
+                            if (
+                                unvisited[pos_arr]
+                                and cost2 < cost
+                                and below == 0
+                                and (
+                                    not utree.same(
+                                        (pos_arr[0]) * side + (pos_arr[1]),
+                                        (base_arr[0]) * side + (base_arr[1]),
+                                    )
+                                )
+                            ):
                                 # storage.push(config2.copy(), cost2)
                                 config_next = config2.copy()
                                 cost = cost2
@@ -169,6 +188,11 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 file=a,
             )
 
+            utree.union(
+                (pos[0] + radius) * side + (pos[1] + radius),
+                (base[0] + radius) * side + (base[1] + radius),
+            )
+
         # Otherwise, find the nearest unvisited point and go there ignoring the travel map:
         else:
             # Search every single pixel of the travel map for unvisited points:
@@ -181,7 +205,12 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                         distance2 = np.sqrt(
                             (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
                         )
-                        if distance2 < distance:
+                        if distance2 < distance and (
+                            not utree.same(
+                                i * side + j,
+                                (base_arr[0]) * side + (base_arr[1]),
+                            )
+                        ):
                             storage.push((i - radius, j - radius), distance2)
                             point = (i - radius, j - radius)
                             distance = distance2
@@ -214,6 +243,12 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                     pos[1] - base[1],
                     file=a,
                 )
+
+                utree.union(
+                    (pos[0] + radius) * side + (pos[1] + radius),
+                    (base[0] + radius) * side + (base[1] + radius),
+                )
+
                 base = pos
 
     # Return to origin:
