@@ -203,7 +203,7 @@ def two_opt_greedy(config, image_lut, max_itr=1):
     while itr < max_itr:
         improve = False
         for i in range(1, N):
-            for j in range(i + 2, i + 50):
+            for j in range(i + 2, i + 30):
                 p_AC = get_path_to_configuration(config[i - 1], config[j - 1])
                 p_BD = get_path_to_configuration(config[i], config[j])
 
