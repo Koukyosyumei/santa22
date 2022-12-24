@@ -246,11 +246,12 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
         if improve_flag:
             print(f"{itr},{offset}", file=f)
             tolerance_cnt = 0
+        else:
+            tolerance_cnt += 1
 
         if improve_score != 0:
             current_score = current_score + improve_score
             config = config_new
-            tolerance_cnt += 1
 
         if current_score < best_score:
             best_config = config.copy()
