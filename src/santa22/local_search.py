@@ -223,8 +223,9 @@ def two_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     config = run_remove(config)
     initial_score = evaluate_config(config, image_lut)
+    current_score = initial_score
     best_score = initial_score
-    print("initial score is ", best_score)
+    print("initial score is ", current_score)
 
     f = open("offset.csv", "w")
 
@@ -247,9 +248,13 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
             tolerance_cnt = 0
 
         if improve_score != 0:
-            best_score = best_score + improve_score
+            current_score = current_score + improve_score
             config = config_new
             tolerance_cnt += 1
+
+        if current_score < best_score:
+            best_config = config.copy()
+            best_score = current_score
 
         if tolerance_cnt > 500000:
             config = double_bridge(config)
@@ -257,13 +262,13 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
         if (itr + 1) % 500000 == 0:
             config = run_remove(config)
-            best_score = evaluate_config(config, image_lut)
-            print(best_score)
+            current_score = evaluate_config(config, image_lut)
+            print(current_score)
 
     f.close()
 
-    config = run_remove(config)
-    final_score = evaluate_config(config, image_lut)
+    best_config = run_remove(best_config)
+    final_score = evaluate_config(best_config, image_lut)
 
     print("improved score is ", final_score)
-    return config, initial_score > final_score
+    return best_config, initial_score > final_score
