@@ -198,12 +198,12 @@ def two_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
 @njit
 def two_opt_greedy(config, image_lut, max_itr=1):
     N = len(config)
-    improve = False
     itr = 0
 
     while itr < max_itr:
+        improve = False
         for i in range(1, N):
-            for j in range(i + 2, i + 10):
+            for j in range(i + 2, i + 50):
                 p_AC = get_path_to_configuration(config[i - 1], config[j - 1])
                 p_BD = get_path_to_configuration(config[i], config[j])
 
@@ -222,6 +222,9 @@ def two_opt_greedy(config, image_lut, max_itr=1):
                         (config[:i], p_AC, p_CB[1:], p_BD[1:], config[j + 1 :])
                     )
                     improve = True
+
+            if (i + 1) % 5000 == 0:
+                print(i, evaluate_config(config, image_lut))
 
         itr += 1
 
