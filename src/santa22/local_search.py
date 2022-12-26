@@ -32,7 +32,6 @@ offset_choice_weight = [
 
 
 def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
-    print("initial_score: ", evaluate_config(config, image_lut))
     config = run_remove(config)
     print("remove duplicates: ", evaluate_config(config, image_lut))
     # config = two_opt_greedy(
