@@ -77,6 +77,8 @@ def main():
     parser = argparse.ArgumentParser()
     parsed_args = add_args(parser)
 
+    print(f"Solve Santa2022 with greedy & local search (seed={parsed_args.seed})")
+
     random.seed(parsed_args.seed)
     np.random.seed(parsed_args.seed)
 
