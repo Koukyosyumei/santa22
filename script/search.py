@@ -76,6 +76,7 @@ def main():
     parser = argparse.ArgumentParser()
     parsed_args = add_args(parser)
 
+    print(f"Set Random Seed to {parsed_args.seed}")
     random.seed(parsed_args.seed)
     np.random.seed(parsed_args.seed)
 

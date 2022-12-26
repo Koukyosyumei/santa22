@@ -35,7 +35,9 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     print("initial_score: ", evaluate_config(config, image_lut))
     config = run_remove(config)
     print("remove duplicates: ", evaluate_config(config, image_lut))
-    config = two_opt_greedy(config, image_lut)
+    # config = two_opt_greedy(
+    #    config, image_lut, random.sample(list(range(1, len(config))), len(config) - 1), 2
+    # )
     initial_score = evaluate_config(config, image_lut)
     current_score = initial_score
     best_score = initial_score

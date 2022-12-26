@@ -101,7 +101,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         else:
             below = unvisited[(base_arr[0], base_arr[1] - 1)]
 
-        # storage = TopKStorage()
+        storage = TopKStorage()
 
         # Single-link step:
         for i in range(len(origin)):  # for each arm link
@@ -127,7 +127,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                         )
                     )
                 ):
-                    # storage.push(config2.copy(), cost2)
+                    storage.push(config2.copy(), cost2)
                     config_next = config2.copy()
                     cost = cost2
                     found = True
@@ -160,7 +160,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                                     )
                                 )
                             ):
-                                # storage.push(config2.copy(), cost2)
+                                storage.push(config2.copy(), cost2)
                                 config_next = config2.copy()
                                 cost = cost2
                                 found = True
