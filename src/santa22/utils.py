@@ -12,14 +12,24 @@ def get_position(config):
     )  # reduce(lambda p, q: (p[0] + q[0], p[1] + q[1]), config, (0, 0))
 
 
+@njit
+def make_2d(arraylist):
+    n = len(arraylist)
+    k = arraylist[0].shape[0]
+    a2d = np.zeros((n, k))
+    for i in range(n):
+        a2d[i] = arraylist[i]
+    return a2d
+
+
+@njit
 def compress_path(path):
 
     if len(path) > 2:
 
-        new_path = []
         max_conf_dist = 1
         # r = [np.array([[-1000, -1000]]) for _ in range(len(path[0]))]
-        r = [[np.array([-2000, 2000])] for _ in range(len(path[0]))]
+        r = [[np.array([-1000, 1000], dtype="int32")] for _ in range(len(path[0]))]
 
         for p in path:
             for i, c in enumerate(p):
@@ -30,27 +40,31 @@ def compress_path(path):
                 #        ind = np.where(np.sum(c == r[i], axis=1))[0][0]
                 #        r[i] = r[i][: ind + 1]
 
-                if np.sum(r[i]) == -2000 or np.any(r[i][-1] != c):
+                if len(r[i]) == 1 or np.any(r[i][-1] != c):
 
                     # if c not in r[i]:
-                    if not np.max(np.sum(c == r[i], axis=1)) == 2:
-                        r[i].append(c)
+                    if not np.max(np.sum(c == make_2d(r[i]), axis=1)) == 2:
+                        r[i].append(c.astype(np.int32))
                     else:
-                        r[i] = r[i][: np.array(r[i]).tolist().index(c.tolist()) + 1]
+                        ind = np.where(np.sum(c == make_2d(r[i]), axis=1) == 2)[0][0]
+                        r[i] = r[i][: ind + 1]
 
         r = [r_[1:] for r_ in r]
-        max_conf_dist = max([len(r_) for r_ in r])
+        max_conf_dist = np.array([len(r_) for r_ in r]).max()
+
+        new_path = np.zeros((max_conf_dist, len(r), 2), dtype="int32")
 
         for i in range(max_conf_dist):
-            new_conf = []
-            for _, r_ in enumerate(r):
+            new_conf = np.zeros((len(r), 2), dtype="int32")
+            for j, r_ in enumerate(r):
                 if i < len(r_):
                     c_ = r_[i]
                 else:
                     c_ = r_[-1]
-                new_conf.append(c_)
+                new_conf[j] = c_
 
-            new_path.append(new_conf)
+            new_path[i] = new_conf
+        new_path = new_path.astype(np.int32)
 
         return new_path
 
@@ -124,6 +138,7 @@ def get_radii(config):
     return np.append(radii, np.zeros(1, dtype="int"))
 
 
+@njit
 def get_path_to_point(config, point_):
     """Find a path of configurations to `point` starting at `config`."""
     config_start = config.copy()
@@ -164,6 +179,7 @@ def get_path_to_point(config, point_):
     return path
 
 
+@njit
 def get_path_to_configuration(from_config, to_config):
     path = np.expand_dims(from_config, 0).copy()
     config = from_config.copy()
