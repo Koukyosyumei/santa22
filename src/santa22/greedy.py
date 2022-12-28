@@ -2,6 +2,8 @@ import random
 
 import numpy as np
 from numba import njit
+from numba.typed import Dict
+from numba.types import types
 from tqdm import tqdm
 
 from .cost import color_cost
@@ -42,6 +44,8 @@ def single_link_step(
     origin, config, base, base_arr, radius, image, unvisited, below, cost, found
 ):
     config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
 
     for i in range(len(origin)):  # for each arm link
         for d in [-1, 1]:  # for each direction
@@ -57,12 +61,23 @@ def single_link_step(
             # Must move down unless impossible:
             if (
                 unvisited[pos_arr]
-                and cost_cur < cost
+                and cost_cur <= cost
                 and (dy < 0 or (dy >= 0 and below == 0))
             ):
-                config_next = config_cur.copy()
+                if cost_store_init:
+                    cost_store.pop()
+                    cost_store_init = False
+
+                if cost_cur == cost:
+                    cost_store.append(config_cur.copy())
+                else:
+                    cost_store = [config_cur.copy()]
+
                 cost = cost_cur
                 found = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
 
     return config_next, cost, found
 
@@ -72,6 +87,8 @@ def double_link_step(
     origin, config, base, base_arr, radius, image, unvisited, cost, found
 ):
     config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
     update = False
 
     for i in range(len(origin) - 1):
@@ -90,10 +107,21 @@ def double_link_step(
 
                     # Must move down unless impossible:
                     if unvisited[pos_arr] and cost_cur < cost:
-                        config_next = config_cur.copy()
+                        if cost_store_init:
+                            cost_store.pop()
+                            cost_store_init = False
+
+                        if cost_cur == cost:
+                            cost_store.append(config_cur.copy())
+                        else:
+                            cost_store = [config_cur.copy()]
+
                         cost = cost_cur
                         found = True
                         update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
 
     return update, config_next, cost, found
 
@@ -103,6 +131,8 @@ def triple_link_step(
     origin, config, base, base_arr, radius, image, unvisited, cost, found
 ):
     config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
     update = False
 
     for i in range(len(origin) - 1):
@@ -124,10 +154,21 @@ def triple_link_step(
 
                             # Must move down unless impossible:
                             if unvisited[pos_arr] and cost_cur < cost:
-                                config_next = config_cur.copy()
+                                if cost_store_init:
+                                    cost_store.pop()
+                                    cost_store_init = False
+
+                                if cost_cur == cost:
+                                    cost_store.append(config_cur.copy())
+                                else:
+                                    cost_store = [config_cur.copy()]
+
                                 cost = cost_cur
                                 found = True
                                 update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
 
     return update, config_next, cost, found
 
