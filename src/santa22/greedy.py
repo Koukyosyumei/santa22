@@ -168,10 +168,7 @@ def find_near(side, unvisited, base_arr, radius, epsilon, distance):
                             list_score.pop(max_idx)
                             list_score.append(distance2)
 
-    if random.random() < epsilon:
-        point = list_obj[random.randint(0, k - 1)]
-
-    return point
+    return point, list_obj, list_score
 
 
 def travel_map(df_image, output_dir, epsilon=0.0):
@@ -254,6 +251,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 found = tmp_found
 
             # Tripple-link step:
+            """
             update, tmp_config_next, tmp_cost, tmp_found = triple_link_step(
                 np.array(origin),
                 np.array(config),
@@ -270,6 +268,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 config_next = tmp_config_next.copy()
                 cost = tmp_cost
                 found = tmp_found
+            """
 
         # If an unvisited point was found, we are done for this step:
         if found:
@@ -281,29 +280,11 @@ def travel_map(df_image, output_dir, epsilon=0.0):
 
         # Otherwise, find the nearest unvisited point and go there ignoring the travel map:
         else:
-            """
-            storage = TopKStorage()
-
-            for i in range(side):
-                for j in range(side):
-                    if unvisited[(i, j)]:
-
-                        # Measure the distance to the current point and choose the nearest one:
-                        distance2 = np.sqrt(
-                            (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
-                        )
-                        if distance2 < distance:
-                            storage.push((i - radius, j - radius), distance2)
-                            point = (i - radius, j - radius)
-                            distance = distance2
-
-            # Go to the nearest unvisited point:
-            if random.random() < epsilon:
-                point = storage.sample()
-            """
-
             # Search every single pixel of the travel map for unvisited points:
-            point = find_near(side, unvisited, base_arr, radius, epsilon, distance)
+            point, list_obj, _ = find_near(side, unvisited, base_arr, radius, epsilon, distance)
+            if random.random() < epsilon and len(list_obj) != 0:
+                point = list_obj[random.randint(0, len(list_obj) - 1)]
+
             path = get_path_to_point(np.array(config), np.array(point))[1:]
 
             # Output shortest trajectory:
