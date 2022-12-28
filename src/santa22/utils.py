@@ -2,7 +2,7 @@ import os
 from functools import reduce
 
 import numpy as np
-from numba import njit
+from numba import jit, njit
 
 
 @njit
@@ -12,27 +12,49 @@ def get_position(config):
     )  # reduce(lambda p, q: (p[0] + q[0], p[1] + q[1]), config, (0, 0))
 
 
-@njit
 def compress_path(path):
-    """
-    Compress a path between two points
-    """
-    n_joints = path.shape[1]
-    r = np.zeros((n_joints, path.shape[0], 2), dtype=path.dtype)
-    ll = np.zeros(n_joints, dtype="int")
-    for j in range(len(path)):
-        for i_ in range(n_joints):
-            if ll[i_] == 0 or (r[i_][ll[i_] - 1] != path[j, i_]).any():
-                r[i_, ll[i_]] = path[j, i_]
-                ll[i_] += 1
-    r = r[:, : ll.max()]
 
-    for i_ in range(n_joints):
-        for j in range(ll[i_], r.shape[1]):
-            r[i_, j] = r[i_, j - 1]
-    r = r.transpose(1, 0, 2)
+    if len(path) > 2:
 
-    return r
+        new_path = []
+        max_conf_dist = 1
+        # r = [np.array([[-1000, -1000]]) for _ in range(len(path[0]))]
+        r = [[np.array([-2000, 2000])] for _ in range(len(path[0]))]
+
+        for p in path:
+            for i, c in enumerate(p):
+                # if np.sum(r[i]) == -2000 or np.any(np.not_equal(r[i][-1], c)):
+                #    if not np.any(np.sum(c == r[i], axis=1)):
+                #        r[i] = np.vstack((r[i], c))
+                #    else:
+                #        ind = np.where(np.sum(c == r[i], axis=1))[0][0]
+                #        r[i] = r[i][: ind + 1]
+
+                if np.sum(r[i]) == -2000 or np.any(r[i][-1] != c):
+
+                    # if c not in r[i]:
+                    if not np.max(np.sum(c == r[i], axis=1)) == 2:
+                        r[i].append(c)
+                    else:
+                        r[i] = r[i][: np.array(r[i]).tolist().index(c.tolist()) + 1]
+
+        r = [r_[1:] for r_ in r]
+        max_conf_dist = max([len(r_) for r_ in r])
+
+        for i in range(max_conf_dist):
+            new_conf = []
+            for _, r_ in enumerate(r):
+                if i < len(r_):
+                    c_ = r_[i]
+                else:
+                    c_ = r_[-1]
+                new_conf.append(c_)
+
+            new_path.append(new_conf)
+
+        return new_path
+
+    return path
 
 
 @njit
@@ -102,7 +124,6 @@ def get_radii(config):
     return np.append(radii, np.zeros(1, dtype="int"))
 
 
-@njit
 def get_path_to_point(config, point_):
     """Find a path of configurations to `point` starting at `config`."""
     config_start = config.copy()
@@ -143,7 +164,6 @@ def get_path_to_point(config, point_):
     return path
 
 
-@njit
 def get_path_to_configuration(from_config, to_config):
     path = np.expand_dims(from_config, 0).copy()
     config = from_config.copy()
