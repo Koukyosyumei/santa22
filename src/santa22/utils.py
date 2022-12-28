@@ -68,7 +68,7 @@ def compress_path(path):
 
         return new_path
 
-    return path
+    return path.astype(np.int32)
 
 
 @njit
