@@ -84,7 +84,7 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
     f.close()
 
-    best_config = run_remove(best_config)
+    best_config = run_remove(config)
     best_config = run_remove(best_config)
     final_score = evaluate_config(best_config, image_lut)
 

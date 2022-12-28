@@ -133,10 +133,15 @@ def triple_link_step(
 
 
 @njit
-def find_near(side, unvisited, base_arr, radius, epsilon, distance):
+def twopart(n):
+    return n & (n - 1) == 0
+
+
+@njit
+def find_near(side, unvisited, base_arr, radius, distance):
     # Go to the nearest unvisited point:
 
-    k = 3
+    k = 2
     list_obj = [(-1000, -1000)]
     list_score = [100000.00]
     list_init = True
@@ -146,7 +151,15 @@ def find_near(side, unvisited, base_arr, radius, epsilon, distance):
             if unvisited[(i, j)]:
 
                 # Measure the distance to the current point and choose the nearest one:
-                distance2 = np.sqrt((base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2)
+                penalty = 1
+                p = 0.16  # 0.1 - 79200
+                if twopart(base_arr[0] - i):
+                    penalty += p
+                if twopart(base_arr[1] - j):
+                    penalty += p
+                distance2 = penalty * np.sqrt(
+                    (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
+                )
 
                 if distance2 < distance:
                     point = (i - radius, j - radius)
@@ -251,7 +264,6 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 found = tmp_found
 
             # Tripple-link step:
-            """
             update, tmp_config_next, tmp_cost, tmp_found = triple_link_step(
                 np.array(origin),
                 np.array(config),
@@ -268,7 +280,6 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 config_next = tmp_config_next.copy()
                 cost = tmp_cost
                 found = tmp_found
-            """
 
         # If an unvisited point was found, we are done for this step:
         if found:
@@ -281,7 +292,7 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         # Otherwise, find the nearest unvisited point and go there ignoring the travel map:
         else:
             # Search every single pixel of the travel map for unvisited points:
-            point, list_obj, _ = find_near(side, unvisited, base_arr, radius, epsilon, distance)
+            point, list_obj, _ = find_near(side, unvisited, base_arr, radius, distance)
             if random.random() < epsilon and len(list_obj) != 0:
                 point = list_obj[random.randint(0, len(list_obj) - 1)]
 
