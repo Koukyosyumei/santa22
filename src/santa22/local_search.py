@@ -1,3 +1,5 @@
+import os
+import pickle
 import random
 
 from tqdm import tqdm
@@ -31,13 +33,17 @@ offset_choice_weight = [
 ]
 
 
-def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
+def local_search(config, image_lut, output_dir, max_itr=10, t_start=0.3, t_end=0.001):
     config = run_remove(config)
     config = run_remove(config)
-    print("remove duplicates: ", evaluate_config(config, image_lut))
-    # config = two_opt_greedy(
-    #    config, image_lut, random.sample(list(range(1, len(config))), len(config) - 1), 2
-    # )
+    removed_duplicate_score = evaluate_config(config, image_lut)
+    print("remove duplicates: ", removed_duplicate_score)
+    with open(
+        os.path.join(output_dir, f"initial_path_{removed_duplicate_score}.pickle"),
+        mode="wb",
+    ) as f:
+        pickle.dump(config, f)
+
     initial_score = evaluate_config(config, image_lut)
     current_score = initial_score
     best_score = initial_score

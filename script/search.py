@@ -102,6 +102,7 @@ def main():
     path_result_improved, updated_flag = local_search(
         np.array(path_result),
         image_lut,
+        parsed_args.output_dir,
         parsed_args.max_itr,
         parsed_args.t_start,
         parsed_args.t_end,
