@@ -2,11 +2,9 @@ import random
 
 import numpy as np
 from numba import njit
-from numba.typed import Dict
-from numba.types import types
 from tqdm import tqdm
 
-from .cost import color_cost
+from .cost import color_cost, evaluate_config
 from .utils import get_path_to_configuration, get_path_to_point, get_position, rotate
 
 
@@ -83,6 +81,47 @@ def single_link_step(
 
 
 @njit
+def single_link_step_candidates(
+    origin, config, base, base_arr, radius, image, unvisited, below, cost, found
+):
+    cost_store = [[config.copy()]]
+    cost_store_init = True
+    updated = False
+
+    for i in range(len(origin)):  # for each arm link
+        for d in [-1, 1]:  # for each direction
+            # Rotate link and get new position and vertical displacement:
+            config_cur = rotate(config, i, d)
+            pos = get_position(config_cur)
+            dy = pos[1] - base[1]
+
+            # Convert from cartesian to array coordinates and measure cost:
+            pos_arr = (pos[0] + radius, pos[1] + radius)
+            cost_cur = 1 + color_cost(base_arr, pos_arr, image)
+
+            # Must move down unless impossible:
+            if (
+                unvisited[pos_arr]
+                and cost_cur <= cost
+                and (dy < 0 or (dy >= 0 and below == 0))
+            ):
+                if cost_store_init:
+                    cost_store.pop()
+                    cost_store_init = False
+
+                if cost_cur == cost:
+                    cost_store.append([config_cur.copy()])
+                else:
+                    cost_store = [[config_cur.copy()]]
+
+                cost = cost_cur
+                found = True
+                updated = True
+
+    return updated, cost_store, cost, found
+
+
+@njit
 def double_link_step(
     origin, config, base, base_arr, radius, image, unvisited, cost, found
 ):
@@ -124,6 +163,46 @@ def double_link_step(
         config_next = cost_store[random.randint(0, len(cost_store) - 1)]
 
     return update, config_next, cost, found
+
+
+@njit
+def double_link_step_candidates(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    cost_store = [[config.copy()]]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    # Rotate two separate links, get position and vertical displacement:
+                    config_cur = rotate(config, i, d1)
+                    config_cur = rotate(config_cur, j, d2)
+                    pos = get_position(config_cur)
+                    dy = pos[1] - base[1]
+
+                    # Convert from cartesian to array coordinates and measure cost:
+                    pos_arr = (pos[0] + radius, pos[1] + radius)
+                    cost_cur = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
+
+                    # Must move down unless impossible:
+                    if unvisited[pos_arr] and cost_cur < cost:
+                        if cost_store_init:
+                            cost_store.pop()
+                            cost_store_init = False
+
+                        if cost_cur == cost:
+                            cost_store.append([config_cur.copy()])
+                        else:
+                            cost_store = [[config_cur.copy()]]
+
+                        cost = cost_cur
+                        found = True
+                        update = True
+
+    return update, cost_store, cost, found
 
 
 @njit
@@ -174,6 +253,49 @@ def triple_link_step(
 
 
 @njit
+def triple_link_step_candidates(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    cost_store = [[config.copy()]]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    for k in range(j + 1, len(origin)):
+                        for d3 in [-1, 1]:
+                            # Rotate three separate links, get position and vertical displacement:
+                            config_cur = rotate(config, i, d1)
+                            config_cur = rotate(config_cur, j, d2)
+                            config_cur = rotate(config_cur, k, d3)
+                            pos = get_position(config_cur)
+                            dy = pos[1] - base[1]
+
+                            # Convert from cartesian to array coordinates and measure cost:
+                            pos_arr = (pos[0] + radius, pos[1] + radius)
+                            cost_cur = np.sqrt(3) + color_cost(base_arr, pos_arr, image)
+
+                            # Must move down unless impossible:
+                            if unvisited[pos_arr] and cost_cur < cost:
+                                if cost_store_init:
+                                    cost_store.pop()
+                                    cost_store_init = False
+
+                                if cost_cur == cost:
+                                    cost_store.append([config_cur.copy()])
+                                else:
+                                    cost_store = [[config_cur.copy()]]
+
+                                cost = cost_cur
+                                found = True
+                                update = True
+
+    return update, cost_store, cost, found
+
+
+@njit
 def twopart(n):
     return n & (n - 1) == 0
 
@@ -183,7 +305,7 @@ def find_near(side, unvisited, base_arr, radius, distance):
     # Go to the nearest unvisited point:
 
     k = 2
-    list_obj = [(-1000, -1000)]
+    list_obj = [np.array((-1000, -1000))]
     list_score = [100000.00]
     list_init = True
 
@@ -212,17 +334,178 @@ def find_near(side, unvisited, base_arr, radius, distance):
                         list_init = False
 
                     if len(list_obj) < k:
-                        list_obj.append((i - radius, j - radius))
+                        list_obj.append(np.array((i - radius, j - radius)))
                         list_score.append(distance2)
                     else:
                         if distance2 < np.max(np.array(list_score)):
                             max_idx = np.argmax(np.array(list_score))
                             list_obj.pop(max_idx)
-                            list_obj.append((i - radius, j - radius))
+                            list_obj.append(np.array((i - radius, j - radius)))
                             list_score.pop(max_idx)
                             list_score.append(distance2)
 
     return point, list_obj, list_score
+
+
+def get_candidates_for_recursive_search(
+    origin, config, unvisited_, radius, side, image
+):
+
+    # Optimization variables:
+    cost = 1e6
+    distance = 1e6
+    found = False
+
+    # Current configuration:
+    base = get_position(config)
+    base_arr = (base[0] + radius, base[1] + radius)
+    unvisited = unvisited_.copy()
+    unvisited[base_arr] = 0
+
+    # Is the location one step below unvisited?
+    if base[1] == -128:  # if we reached the bottom border
+        below = 0
+    else:
+        below = unvisited[(base_arr[0], base_arr[1] - 1)]
+
+    # Single-link step:
+    update, path_candidates, cost, found = single_link_step_candidates(
+        origin,
+        config,
+        base,
+        base_arr,
+        radius,
+        image,
+        unvisited,
+        below,
+        cost,
+        found,
+    )
+
+    if below == 0:
+        # Double-link step:
+        update, tmp_path_candidates, tmp_cost, tmp_found = double_link_step_candidates(
+            origin,
+            config,
+            base,
+            base_arr,
+            radius,
+            image,
+            unvisited,
+            cost,
+            found,
+        )
+
+        if update:
+            path_candidates = tmp_path_candidates.copy()
+            cost = tmp_cost
+            found = tmp_found
+
+        # Tripple-link step:
+        update, tmp_path_candidates, tmp_cost, tmp_found = triple_link_step_candidates(
+            origin,
+            config,
+            base,
+            base_arr,
+            radius,
+            image,
+            unvisited,
+            cost,
+            found,
+        )
+
+        if update:
+            path_candidates = tmp_path_candidates.copy()
+            cost = tmp_cost
+            found = tmp_found
+
+    if found:
+        new_visited_candidates = [[(128, 128)]]
+        for c in path_candidates:
+            base = get_position(c[0])
+            base_arr = (base[0] + radius, base[1] + radius)
+            new_visited_candidates.append([base_arr])
+
+        new_visited_candidates = new_visited_candidates[1:]
+    else:
+        _, points_candidates, _ = find_near(side, unvisited, base_arr, radius, distance)
+        path_candidates = [[config.copy()]]
+        new_visited_candidates = [[(128, 128)]]
+
+        for point in points_candidates:
+            path = get_path_to_point(config, point)[1:]
+            # tmp_path = [path[0]]
+            # for p in path[1:]:
+            #    tmp_path.append(p)
+            path_candidates.append(path)
+
+            tmp_visited = [(128, 128)]
+
+            for config in path:
+                pos = get_position(config)
+                pos_arr = (pos[0] + radius, pos[1] + radius)
+                tmp_visited.append(pos_arr)
+
+            new_visited_candidates.append(tmp_visited)
+
+        path_candidates = path_candidates[1:]
+        new_visited_candidates = new_visited_candidates[1:]
+
+    return path_candidates, new_visited_candidates
+
+
+def recursive_search(image_lut, origin, config, unvisited, radius, side, image, depth):
+    result = [config.copy()]
+    path_candidates, visited_candidates = get_candidates_for_recursive_search(
+        np.array(origin), np.array(config), unvisited, radius, side, image
+    )
+    best_score = 1e8
+
+    if depth == 1:
+        best_i = 0
+
+        for i, tmp_path in enumerate(path_candidates):
+            tmp_score = evaluate_config(np.array([config] + tmp_path), image_lut)
+            if tmp_score < best_score:
+                best_score = tmp_score
+                best_i = i
+
+        return (
+            path_candidates[best_i],
+            visited_candidates[best_i],
+            best_score,
+        )
+
+    else:
+        final_result = None
+        best_result = None
+        for i, tmp_path in enumerate(path_candidates):
+            unvisited_ = unvisited.copy()
+            for p in visited_candidates[i]:
+                unvisited_[p] = 0
+
+            result = recursive_search(
+                image_lut,
+                origin,
+                tmp_path[-1],
+                unvisited_,
+                radius,
+                side,
+                image,
+                depth - 1,
+            )
+            tmp_score = result[2]
+            if tmp_score < best_score:
+                best_score = tmp_score
+                best_i = i
+                best_result = result
+
+            final_result = result
+
+        if best_result is None:
+            return final_result
+
+        return best_result
 
 
 def travel_map(df_image, output_dir, epsilon=0.0):
@@ -353,6 +636,64 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 result.append(config)
 
                 base = pos
+
+    pbar.close()
+
+    # Return to origin:
+    path = get_path_to_configuration(np.array(config), np.array(origin))[1:]
+
+    result.extend(path)
+
+    return result
+
+
+def travel_map_recursive(df_image, image_lut, output_dir, epsilon=0.0):
+
+    side = df_image.x.nunique()
+    radius = df_image.x.max()
+    image = df_image[["r", "g", "b"]].values.reshape(side, side, -1)
+
+    # Flip X axis and transpose X-Y axes to simplify cartesian to array mapping:
+    image = image[::-1, :, :]
+    image = np.transpose(image, (1, 0, 2))
+
+    # Prepare pixel travel map:
+    unvisited = np.ones([side, side])  # one = unvisited pixel; 0 = visited pixel
+    total = side * side - 1  # total number of pixels minus the origin
+    origin = [
+        (64, 0),
+        (-32, 0),
+        (-16, 0),
+        (-8, 0),
+        (-4, 0),
+        (-2, 0),
+        (-1, 0),
+        (-1, 0),
+    ]  # origin configuration
+    config = origin.copy()  # future configuration
+
+    result = [np.array(config)]
+    pbar = tqdm(total=total)
+    depth = 2
+
+    # Continue until all locations have been visited:
+    while total:
+        base = get_position(np.array(config))
+        base_arr = (base[0] + radius, base[1] + radius)
+        unvisited[base_arr] = 0
+
+        best_path, best_visited, _ = recursive_search(
+            image_lut, origin, config, unvisited, radius, side, image, depth
+        )
+
+        for pos in best_visited:
+            if unvisited[pos]:
+                unvisited[pos] = 0
+                total -= 1
+                pbar.update(1)
+
+        result.extend(best_path)
+        config = best_path[-1]
 
     pbar.close()
 
