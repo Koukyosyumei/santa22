@@ -63,13 +63,15 @@ def local_search(config, image_lut, output_dir, max_itr=10, t_start=0.3, t_end=0
     tolerance_cnt = 0
 
     for itr in tqdm(range(max_itr)):
-        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
 
         if itr % 2 == 0:
+            offset_1 = random.choices(offset_choice, weights=offset_choice_weight)[0]
+            offset_2 = random.choices(offset_choice, weights=offset_choice_weight)[0]
             config_new, improve_score, improve_flag = three_opt(
-                config, offset, image_lut, t_start, t_end, itr, max_itr
+                config, offset_1, offset_2, image_lut, t_start, t_end, itr, max_itr
             )
         else:
+            offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
             config_new, improve_score, improve_flag = two_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )

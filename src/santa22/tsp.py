@@ -44,12 +44,12 @@ def double_bridge(config):
 
 
 @njit
-def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
+def three_opt(config, offset_1, offset_2, image_lut, t_start, t_end, itr, max_itr):
     # offset = 1  # TODO support larger offset
 
-    i = random.randint(1, len(config) - (3 + 2 * offset))
-    j = i + offset + 1
-    k = j + offset + 1
+    i = random.randint(1, len(config) - (3 + offset_1 + offset_2))
+    j = i + offset_1 + 1
+    k = j + offset_2 + 1
 
     d_AB = evaluate_config(config[i - 1 : i + 1], image_lut)
     d_CD = evaluate_config(config[j - 1 : j + 1], image_lut)
