@@ -44,12 +44,15 @@ def local_search(config, image_lut, output_dir, max_itr=10, t_start=0.3, t_end=0
     ) as f:
         pickle.dump(config, f)
 
+    """
     config = two_opt_greedy(
         config,
         image_lut,
         random.sample(list(range(1, len(config))), len(config) - 1),
         2,
     )
+    """
+
     initial_score = evaluate_config(config, image_lut)
     current_score = initial_score
     best_score = initial_score
@@ -62,7 +65,7 @@ def local_search(config, image_lut, output_dir, max_itr=10, t_start=0.3, t_end=0
     for itr in tqdm(range(max_itr)):
         offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
 
-        if itr % 3 == 0:
+        if itr % 2 == 0:
             config_new, improve_score, improve_flag = three_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
