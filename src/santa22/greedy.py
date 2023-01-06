@@ -172,6 +172,58 @@ def triple_link_step(
 
 
 @njit
+def four_link_step(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            config_cur_1 = rotate(config, i, d1)
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    config_cur_2 = rotate(config_cur_1, j, d2)
+                    for k in range(j + 1, len(origin)):
+                        for d3 in [-1, 1]:
+                            config_cur_3 = rotate(config_cur_2, k, d3)
+                            for l in range(j + 1, len(origin)):
+                                for d4 in [-1, 1]:
+                                    # Rotate three separate links, get position and vertical displacement:
+                                    config_cur = rotate(config_cur_3, l, d4)
+                                    pos = get_position(config_cur)
+                                    dy = pos[1] - base[1]
+
+                                    # Convert from cartesian to array coordinates and measure cost:
+                                    pos_arr = (pos[0] + radius, pos[1] + radius)
+                                    cost_cur = np.sqrt(4) + color_cost(
+                                        base_arr, pos_arr, image
+                                    )
+
+                                    # Must move down unless impossible:
+                                    if unvisited[pos_arr] and cost_cur < cost:
+                                        if cost_store_init:
+                                            cost_store.pop()
+                                            cost_store_init = False
+
+                                        if cost_cur == cost:
+                                            cost_store.append(config_cur.copy())
+                                        else:
+                                            cost_store = [config_cur.copy()]
+
+                                        cost = cost_cur
+                                        found = True
+                                        update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
+
+    return update, config_next, cost, found
+
+
+@njit
 def twopart(n):
     return n & (n - 1) == 0
 
@@ -304,6 +356,24 @@ def travel_map(df_image, output_dir, epsilon=0.0):
 
             # Tripple-link step:
             update, tmp_config_next, tmp_cost, tmp_found = triple_link_step(
+                np.array(origin),
+                np.array(config),
+                base,
+                base_arr,
+                radius,
+                image,
+                unvisited,
+                cost,
+                found,
+            )
+
+            if update:
+                config_next = tmp_config_next.copy()
+                cost = tmp_cost
+                found = tmp_found
+
+            # Four-link step:
+            update, tmp_config_next, tmp_cost, tmp_found = four_link_step(
                 np.array(origin),
                 np.array(config),
                 base,
