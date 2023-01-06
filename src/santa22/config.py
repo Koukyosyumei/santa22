@@ -1,10 +1,13 @@
+import math
 import random
 
 import numpy as np
 from numba import njit
+from tqdm import tqdm
+
+from .utils import get_position, points_to_path
 
 
-@njit
 def standard_config_topright(x, y):
     """Return the preferred configuration (list of eight pairs) for the point (x,y)
     [(64, _), (_, 32), (_, 16), (_, 8), (_, 4), (_, 2), (_, 1), (_, 1)]
@@ -24,7 +27,6 @@ def standard_config_topright(x, y):
     return config
 
 
-@njit
 def standard_config_botoomright(x, y):
     """Return the preferred configuration (list of eight pairs) for the point (x,y)
     [(64, _), (_, -32), (_, -16), (_, -8), (_, -4), (_, -2), (_, -1), (_, -1)]
@@ -44,7 +46,6 @@ def standard_config_botoomright(x, y):
     return config
 
 
-@njit
 def standard_config_topleft(x, y):
     """Return the preferred configuration (list of eight pairs) for the point (x,y)
     [(-64, _), (_, 32), (_, 16), (_, 8), (_, 4), (_, 2), (_, 1), (_, 1)]
@@ -64,7 +65,6 @@ def standard_config_topleft(x, y):
     return config
 
 
-@njit
 def standard_config_botoomleft(x, y):
     """Return the preferred configuration (list of eight pairs) for the point (x,y)
     [(-64, _), (_, -32), (_, -16), (_, -8), (_, -4), (_, -2), (_, -1), (_, -1)]
@@ -84,6 +84,17 @@ def standard_config_botoomleft(x, y):
     return config
 
 
+def standard_config(x, y):
+    if x > 0 and y >= 0:
+        return standard_config_topright(x, y)
+    elif x > 0 and y < 0:
+        return standard_config_botoomright(x, y)
+    elif x <= 0 and y >= 0:
+        return standard_config_topleft(x, y)
+    else:
+        return standard_config_botoomleft(x, y)
+
+
 def get_baseline():
     # Generate points
     points_baseline = []
@@ -99,6 +110,8 @@ def get_baseline():
             flag = not flag
         flag = False
     points_baseline = np.array(points_baseline)
+
+    return points_baseline
 
 
 @njit
@@ -117,10 +130,18 @@ def evaluate_points(points, image_lut):
 
 
 @njit
+def calc_threshold(improve, t_start, t_final, current_itr, max_itr):
+    t = t_start + (t_final - t_start) * current_itr / max_itr
+    return math.exp(improve / t)
+
+
 def two_opt(points, offset, image_lut, t_start, t_end, itr, max_itr):
-    i = random.randint(1, len(points) - (3 + offset))
+    i = random.randint(2, len(points) - (4 + offset))
     j = i + 1 + offset
 
+    assert i != 0 and j != len(points) - 1
+
+    # A: i-1, B: i, C: j-1, D: j
     d_AB = evaluate_points(points[i - 1 : i + 1], image_lut)
     d_CD = evaluate_points(points[j - 1 : j + 1], image_lut)
     d_AC = evaluate_points(points[[i - 1, j - 1]], image_lut)
@@ -135,10 +156,9 @@ def two_opt(points, offset, image_lut, t_start, t_end, itr, max_itr):
         return (
             np.concatenate(
                 (
-                    points[: i - 1],
-                    points[[i - 1, j - 1]],
-                    points[i:j][::-1][1:],
-                    points[j:],
+                    points[:i],  # ... A
+                    points[i:j][::-1],  # CB
+                    points[j:],  # D ...
                 )
             ),
             -d0 + d1,
@@ -146,3 +166,43 @@ def two_opt(points, offset, image_lut, t_start, t_end, itr, max_itr):
         )
 
     return points, 0, False
+
+
+def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
+
+    initial_points = get_baseline()
+    initial_score = evaluate_points(initial_points, image_lut)
+    print("initial color cost is ", initial_score)
+
+    points = initial_points
+    best_points = points
+    current_score = initial_score
+    best_score = initial_score
+    tolerance_cnt = 0
+
+    for itr in tqdm(range(max_itr)):
+
+        offset = random.randint(0, 30)
+        points_new, improve_score, improve_flag = two_opt(
+            points, offset, image_lut, t_start, t_end, itr, max_itr
+        )
+
+        if improve_flag:
+            tolerance_cnt = 0
+        else:
+            tolerance_cnt += 1
+
+        if improve_score < 0:
+            print(improve_score)
+            current_score = current_score + improve_score
+            points = points_new
+
+        if current_score < best_score:
+            best_points = points.copy()
+            best_score = current_score
+
+    final_score = evaluate_points(best_points, image_lut)
+    best_config = points_to_path(best_points)
+
+    print("improved score is ", final_score)
+    return best_config, best_points, initial_score > final_score
