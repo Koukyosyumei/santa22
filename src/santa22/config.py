@@ -302,6 +302,106 @@ def calc_threshold(improve, t_start, t_final, current_itr, max_itr):
     return math.exp(improve / t)
 
 
+def four_opt(x, y, radius, idx_mat, points, image_lut):
+    i = idx_mat[y + radius][x + radius]
+    ip = idx_mat[y + radius][x + 1 + radius]
+    j = idx_mat[y + 1 + radius][x + radius]
+    jp = idx_mat[y + 1 + radius][x + 1 + radius]
+    if abs(i - ip) != 1 or abs(j - jp) != 1:
+        return points, idx_mat
+    else:
+        if x > 0 and y >= 0:
+            rag = range(1, radius)
+        elif x <= 0 and y > 0:
+            rag = range(-radius, 0)
+        elif x >= 0 and y < 0:
+            rag = range(0, radius)
+        else:
+            rag = range(-radius, -1)
+
+        for x_ in rag:
+            if x == x_:
+                continue
+
+            k = idx_mat[y + 1 + radius][x_ + radius]
+            kp = idx_mat[y + 1 + radius][x_ + 1 + radius]
+            el = idx_mat[y + 2 + radius][x_ + radius]
+            elp = idx_mat[y + 2 + radius][x_ + 1 + radius]
+
+            if abs(k - kp) != 1 or abs(el - elp) != 1:
+                continue
+            else:
+                if i < ip and i < el:
+                    score = evaluate_points(points[i : elp + 1], image_lut)
+                    pre_points = points[:i]
+                    new_sub_points = np.concatenate(
+                        [
+                            points[[i]],
+                            points[j : el + 1],
+                            points[k : jp + 1],
+                            points[ip : kp + 1],
+                            points[[elp]],
+                        ]
+                    )
+                    assert len(points[i : elp + 1]) == len(new_sub_points), (
+                        points[i : elp + 1],
+                        new_sub_points,
+                    )
+                    post_points = points[elp + 1 :]
+                elif ip < i and i < el:
+                    score = evaluate_points(points[ip : el + 1], image_lut)
+                    pre_points = points[:ip]
+                    new_sub_points = np.concatenate(
+                        [
+                            points[[ip]],
+                            points[jp : elp + 1],
+                            points[kp : j + 1],
+                            points[i : k + 1],
+                            points[[el]],
+                        ]
+                    )
+                    post_points = points[el + 1 :]
+                elif ip < i and el < i:
+                    score = evaluate_points(points[elp : i + 1], image_lut)
+                    pre_points = points[:elp]
+                    new_sub_points = np.concatenate(
+                        [
+                            points[[elp]],
+                            points[kp : ip + 1],
+                            points[jp : k + 1],
+                            points[el : j + 1],
+                            points[[i]],
+                        ]
+                    )
+                    post_points = points[i + 1 :]
+                elif i < ip and el < i:
+                    score = evaluate_points(points[el : ip + 1], image_lut)
+                    pre_points = points[:el]
+                    new_sub_points = np.concatenate(
+                        [
+                            points[[el]],
+                            points[k : i + 1],
+                            points[j : kp + 1],
+                            points[elp : jp + 1],
+                            points[[ip]],
+                        ]
+                    )
+                    post_points = points[ip + 1 :]
+
+                new_score = evaluate_points(new_sub_points, image_lut)
+                if new_score < score:
+                    print(points.shape, i, ip, el, elp)
+                    points = np.concatenate([pre_points, new_sub_points, post_points])
+                    print(points.shape)
+
+                    idx = len(pre_points)
+                    for p in new_sub_points:
+                        idx_mat[p[1]][p[0]] = idx
+                        idx += 1
+
+        return points, idx_mat
+
+
 @njit
 def two_opt(points, offset, image_lut, t_start, t_end, itr, max_itr):
     i = random.randint(2, len(points) - (4 + offset))
@@ -349,6 +449,8 @@ def fill_gap_config(config):
 
 def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
+    radius = 128
+
     start_configs = [
         [(64, i), (-32, 0), (-16, 0), (-8, 0), (-4, 0), (-2, 0), (-1, 0), (-1, 0)]
         for i in range(64)
@@ -360,34 +462,24 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     print("initial color cost is ", initial_score)
 
     points = initial_points
+    print(len(points))
+    idx_mat = np.zeros((257, 257), dtype=int) + -99
+    for i, p in enumerate(points):
+        idx_mat[p[1]][p[0]] = i
+
+    for _ in tqdm(range(max_itr)):
+        x = random.randint(-128, 126)
+        y = random.randint(-128, 126)
+        if idx_mat[y + radius][x + radius] > 0:
+            points, idx_mat = four_opt(x, y, radius, idx_mat, points, image_lut)
+
     best_points = points
-    current_score = initial_score
-    best_score = initial_score
-    tolerance_cnt = 0
-
-    for itr in tqdm(range(max_itr)):
-
-        offset = random.randint(0, 30)
-        points_new, improve_score, improve_flag = two_opt(
-            points, offset, image_lut, t_start, t_end, itr, max_itr
-        )
-
-        if improve_flag:
-            tolerance_cnt = 0
-        else:
-            tolerance_cnt += 1
-
-        if improve_score < 0:
-            current_score = current_score + improve_score
-            points = points_new
-
-        if current_score < best_score:
-            best_points = points.copy()
-            best_score = current_score
 
     print(len(set([(p[0], p[1]) for p in best_points.tolist()] + start_points)))
 
     final_score = evaluate_points(best_points, image_lut)
+    print("improved score is ", final_score)
+
     best_config = np.array(
         start_configs + [standard_config(p[0], p[1]) for p in best_points]
     )
@@ -402,5 +494,4 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     best_config = run_remove(best_config)
     # best_config = run_remove(best_config)
 
-    print("improved score is ", final_score)
     return best_config, best_points, initial_score > final_score
