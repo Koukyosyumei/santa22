@@ -2,13 +2,23 @@ import argparse
 import os
 import pickle
 import random
+from pathlib import Path
 
+import cv2
 import numpy as np
 import pandas as pd
+from PIL import Image
+from tqdm import tqdm, trange
 
-from santa22.config import local_search, standard_config
+from santa22.config import local_search, plot_traj, standard_config
 from santa22.cost import evaluate_config
 from santa22.utils import get_origin, get_path_to_configuration, save_config
+
+
+def imread(path):
+    if isinstance(path, Path):
+        path = path.as_posix()
+    return cv2.imread(path)[:, :, ::-1] / 255
 
 
 def df_to_imagelut(image_df):
@@ -84,17 +94,15 @@ def main():
     df = pd.read_csv(os.path.join(parsed_args.data_dir, "image.csv"))
     image_lut = df_to_imagelut(df)
 
-    final_config, _, _ = local_search(
+    final_config, final_points, _ = local_search(
         image_lut, parsed_args.max_itr, parsed_args.t_start, parsed_args.t_end
     )
-    # config = [standard_config(p[0], p[1]) for p in points]
-    # config_back = get_path_to_configuration(np.array(config[-1]), get_origin(257))[1:]
-
-    # final_config = np.concatenate([config, config_back])
 
     print(evaluate_config(final_config, image_lut))
-
     save_config(parsed_args.output_dir, "sample_improved.csv", final_config)
+
+    image = imread("data/image.png")
+    plot_traj(final_points, image)
 
 
 if __name__ == "__main__":

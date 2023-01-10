@@ -1,9 +1,18 @@
 import math
 import random
+from functools import *
+from itertools import *
+from pathlib import Path
 
+import cv2
+import matplotlib.collections as mc
+import matplotlib.pyplot as plt
+import numba as nb
 import numpy as np
+import pandas as pd
 from numba import njit
-from tqdm import tqdm
+from PIL import Image
+from tqdm import tqdm, trange
 
 from .utils import (
     get_origin,
@@ -97,6 +106,29 @@ def standard_config(x, y):
         return standard_config_bottomleft(x, y)
     else:
         return get_origin(257)
+
+
+@njit
+def get_area_id(x, y):
+    if x > 0 and y >= 0:
+        return 0
+    elif x >= 0 and y < 0:
+        return 1
+    elif x <= 0 and y > 0:
+        return 2
+    elif x < 0 and y <= 0:
+        return 3
+    else:
+        return 4
+
+
+@njit
+def check_areas(coords):
+    fid = get_area_id(coords[0][0], coords[0][1])
+    for p in coords[1:]:
+        if fid != get_area_id(p[0], p[1]):
+            return False
+    return True
 
 
 def get_baseline():
@@ -307,6 +339,11 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
     ip = idx_mat[y + radius][x + 1 + radius]
     j = idx_mat[y + 1 + radius][x + radius]
     jp = idx_mat[y + 1 + radius][x + 1 + radius]
+    # assert (points[i] == np.array((x, y))).all(), (points[i], (x, y))
+    # assert (points[ip] == np.array((x + 1, y))).all(), (points[ip], (x + 1, y))
+    # assert (points[j] == np.array((x, y + 1))).all(), (points[j], (x, y + 1))
+    # assert (points[jp] == np.array((x + 1, y + 1))).all(), (points[jp], (x + 1, y + 1))
+
     if abs(i - ip) != 1 or abs(j - jp) != 1:
         return points, idx_mat
     else:
@@ -322,118 +359,116 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
         for x_ in rag:
             if x == x_:
                 continue
+            elif (x_ in [0, -1]) and ((-2 <= y) and (y <= 65)):
+                continue
+
+            if not (
+                check_areas(
+                    np.array([
+                        (x, y),
+                        (x + 1, y),
+                        (x, y + 1),
+                        (x + 1, y + 1),
+                        (x_, y + 1),
+                        (x_ + 1, y + 1),
+                        (x_, y + 2),
+                        (x_ + 1, y + 2),
+                    ])
+                )
+            ):
+                continue
 
             k = idx_mat[y + 1 + radius][x_ + radius]
             kp = idx_mat[y + 1 + radius][x_ + 1 + radius]
             el = idx_mat[y + 2 + radius][x_ + radius]
             elp = idx_mat[y + 2 + radius][x_ + 1 + radius]
 
+            # assert (points[k] == (x_, y + 1)).all(), (points[k], (x_, y + 1))
+            # assert (points[kp] == (x_ + 1, y + 1)).all(), (points[kp], (x_ + 1, y + 1))
+            # assert (points[el] == (x_, y + 2)).all(), (points[el], (x_, y + 2))
+            # assert (points[elp] == (x_ + 1, y + 2)).all(), (
+            #     points[elp],
+            #     (x_ + 1, y + 2),
+            # )
+
             if abs(k - kp) != 1 or abs(el - elp) != 1:
                 continue
             else:
                 if i < ip and i < el:
                     score = evaluate_points(points[i : elp + 1], image_lut)
-                    pre_points = points[:i]
                     new_sub_points = np.concatenate(
-                        [
-                            points[[i]],
+                        (
+                            points[i : i + 1],
                             points[j : el + 1],
                             points[k : jp + 1],
                             points[ip : kp + 1],
-                            points[[elp]],
-                        ]
+                            points[elp : elp + 1],
+                        )
                     )
-                    assert len(points[i : elp + 1]) == len(new_sub_points), (
-                        points[i : elp + 1],
-                        new_sub_points,
-                    )
+                    if len(points[i : elp + 1]) != len(new_sub_points):
+                        continue
+                    pre_points = points[:i]
                     post_points = points[elp + 1 :]
                 elif ip < i and i < el:
                     score = evaluate_points(points[ip : el + 1], image_lut)
-                    pre_points = points[:ip]
                     new_sub_points = np.concatenate(
-                        [
-                            points[[ip]],
+                        (
+                            points[ip : ip + 1],
                             points[jp : elp + 1],
                             points[kp : j + 1],
                             points[i : k + 1],
-                            points[[el]],
-                        ]
+                            points[el : el + 1],
+                        )
                     )
+                    if len(points[ip : el + 1]) != len(new_sub_points):
+                        continue
+                    pre_points = points[:ip]
                     post_points = points[el + 1 :]
                 elif ip < i and el < i:
                     score = evaluate_points(points[elp : i + 1], image_lut)
-                    pre_points = points[:elp]
                     new_sub_points = np.concatenate(
-                        [
-                            points[[elp]],
+                        (
+                            points[elp : elp + 1],
                             points[kp : ip + 1],
                             points[jp : k + 1],
                             points[el : j + 1],
-                            points[[i]],
-                        ]
+                            points[i : i + 1],
+                        )
                     )
+                    if len(points[elp : i + 1]) != len(new_sub_points):
+                        continue
+                    pre_points = points[:elp]
                     post_points = points[i + 1 :]
                 elif i < ip and el < i:
                     score = evaluate_points(points[el : ip + 1], image_lut)
-                    pre_points = points[:el]
                     new_sub_points = np.concatenate(
-                        [
-                            points[[el]],
+                        (
+                            points[el : el + 1],
                             points[k : i + 1],
                             points[j : kp + 1],
                             points[elp : jp + 1],
-                            points[[ip]],
-                        ]
+                            points[ip : ip + 1],
+                        )
                     )
+                    if len(points[el : ip + 1]) != len(new_sub_points):
+                        continue
+                    pre_points = points[:el]
                     post_points = points[ip + 1 :]
+
+                for i in range(1, len(new_sub_points)):
+                    if np.sum(np.abs(new_sub_points[i - 1] - new_sub_points[i])) != 1:
+                        continue
 
                 new_score = evaluate_points(new_sub_points, image_lut)
                 if new_score < score:
-                    print(points.shape, i, ip, el, elp)
                     points = np.concatenate([pre_points, new_sub_points, post_points])
-                    print(points.shape)
 
                     idx = len(pre_points)
                     for p in new_sub_points:
-                        idx_mat[p[1]][p[0]] = idx
+                        idx_mat[p[1] + radius][p[0] + radius] = idx
                         idx += 1
 
         return points, idx_mat
-
-
-@njit
-def two_opt(points, offset, image_lut, t_start, t_end, itr, max_itr):
-    i = random.randint(2, len(points) - (4 + offset))
-    j = i + 1 + offset
-
-    # A: i-1, B: i, C: j-1, D: j
-    ac_idx = np.array([i - 1, j - 1])
-    bd_idx = np.array([i, j])
-    d_AB = evaluate_points(points[i - 1 : i + 1], image_lut)
-    d_CD = evaluate_points(points[j - 1 : j + 1], image_lut)
-    d_AC = evaluate_points(points[ac_idx], image_lut)
-    d_BD = evaluate_points(points[bd_idx], image_lut)
-
-    d0 = d_AB + d_CD
-    d1 = d_AC + d_BD
-
-    if d0 > d1 or random.random() < calc_threshold(
-        d0 - d1, t_start, t_end, itr, max_itr
-    ):
-        return (
-            np.concatenate(
-                (
-                    points[:i],  # ... A
-                    points[i:j][::-1],  # CB
-                    points[j:],  # D ...
-                )
-            ),
-            -d0 + d1,
-            d0 > d1,
-        )
-
-    return points, 0, False
 
 
 def fill_gap_config(config):
@@ -445,6 +480,41 @@ def fill_gap_config(config):
         else:
             new_config = np.concatenate([new_config, config[[i]]])
     return new_config
+
+
+def plot_traj(points, image):
+    origin = np.array([0, 0])
+    lines = []
+    if not (origin == points[0]).all():
+        lines.append([origin, points[0]])
+    for i in range(1, len(points)):
+        lines.append([points[i - 1], points[i]])
+    if not (origin == points[1]).all():
+        lines.append([points[-1], origin])
+
+    colors = []
+    for l in lines:
+        dist = np.abs(l[0] - l[1]).max()
+        if dist <= 2:
+            colors.append("b")
+        else:
+            colors.append("r")
+
+    lc = mc.LineCollection(lines, colors=colors)
+
+    fig = plt.figure(figsize=(20, 20))
+    ax = fig.add_subplot(111)
+    ax.add_collection(lc)
+
+    radius = image.shape[0] // 2
+    ax.matshow(
+        image * 0.8 + 0.2,
+        extent=(-radius - 0.5, radius + 0.5, -radius - 0.5, radius + 0.5),
+    )
+    ax.grid(None)
+
+    ax.autoscale()
+    fig.savefig("a.png")
 
 
 def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
@@ -463,14 +533,19 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
     points = initial_points
     print(len(points))
-    idx_mat = np.zeros((257, 257), dtype=int) + -99
+    idx_mat = np.zeros((257, 257), dtype=int) - 1
     for i, p in enumerate(points):
-        idx_mat[p[1]][p[0]] = i
+        idx_mat[p[1] + radius][p[0] + radius] = i
 
     for _ in tqdm(range(max_itr)):
         x = random.randint(-128, 126)
         y = random.randint(-128, 126)
-        if idx_mat[y + radius][x + radius] > 0:
+        if (
+            idx_mat[y + radius][x + radius] >= 0
+            and idx_mat[y + radius][x + 1 + radius] >= 0
+            and idx_mat[y + 1 + radius][x + radius] >= 0
+            and idx_mat[y + 1 + radius][x + 1 + radius] >= 0
+        ):
             points, idx_mat = four_opt(x, y, radius, idx_mat, points, image_lut)
 
     best_points = points
@@ -494,4 +569,8 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     best_config = run_remove(best_config)
     # best_config = run_remove(best_config)
 
-    return best_config, best_points, initial_score > final_score
+    return (
+        best_config,
+        np.concatenate([np.array(start_points), best_points]),
+        initial_score > final_score,
+    )
