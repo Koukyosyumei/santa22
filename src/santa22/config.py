@@ -334,6 +334,7 @@ def calc_threshold(improve, t_start, t_final, current_itr, max_itr):
     return math.exp(improve / t)
 
 
+@njit
 def four_opt(x, y, radius, idx_mat, points, image_lut):
     i = idx_mat[y + radius][x + radius]
     ip = idx_mat[y + radius][x + 1 + radius]
@@ -364,16 +365,18 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
 
             if not (
                 check_areas(
-                    np.array([
-                        (x, y),
-                        (x + 1, y),
-                        (x, y + 1),
-                        (x + 1, y + 1),
-                        (x_, y + 1),
-                        (x_ + 1, y + 1),
-                        (x_, y + 2),
-                        (x_ + 1, y + 2),
-                    ])
+                    np.array(
+                        [
+                            (x, y),
+                            (x + 1, y),
+                            (x, y + 1),
+                            (x + 1, y + 1),
+                            (x_, y + 1),
+                            (x_ + 1, y + 1),
+                            (x_, y + 2),
+                            (x_ + 1, y + 2),
+                        ]
+                    )
                 )
             ):
                 continue
@@ -461,7 +464,7 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
 
                 new_score = evaluate_points(new_sub_points, image_lut)
                 if new_score < score:
-                    points = np.concatenate([pre_points, new_sub_points, post_points])
+                    points = np.concatenate((pre_points, new_sub_points, post_points))
 
                     idx = len(pre_points)
                     for p in new_sub_points:
