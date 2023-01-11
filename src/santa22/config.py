@@ -357,6 +357,11 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
         else:
             rag = range(-radius, -1)
 
+        best_pre_points = points.copy()
+        best_new_sub_points = points.copy()
+        best_post_points = points.copy()
+        best_score_improve = 0
+        is_update_flag = False
         for x_ in rag:
             if x == x_:
                 continue
@@ -466,17 +471,25 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
 
                 if consistent_flag:
                     new_score = evaluate_points(new_sub_points, image_lut)
-                    if new_score < score:
-                        tmp_points = np.concatenate(
-                            (pre_points, new_sub_points, post_points)
-                        )
-                        if len(tmp_points) == 65988:
-                            points = tmp_points
+                    tmp_score_improve = score - new_score
+                    if tmp_score_improve > best_score_improve and (
+                        len(pre_points) + len(new_sub_points) + len(post_points)
+                        == 65988
+                    ):
+                        best_score_improve = tmp_score_improve
+                        best_pre_points = pre_points.copy()
+                        best_new_sub_points = new_sub_points.copy()
+                        best_post_points = post_points.copy()
+                        is_update_flag = True
 
-                        idx = len(pre_points)
-                        for p in new_sub_points:
-                            idx_mat[p[1] + radius][p[0] + radius] = idx
-                            idx += 1
+        if is_update_flag:
+            points = np.concatenate(
+                (best_pre_points, best_new_sub_points, best_post_points)
+            )
+            idx = len(pre_points)
+            for p in new_sub_points:
+                idx_mat[p[1] + radius][p[0] + radius] = idx
+                idx += 1
 
         return points, idx_mat
 
