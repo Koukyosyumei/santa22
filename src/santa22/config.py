@@ -458,18 +458,23 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
                     pre_points = points[:el]
                     post_points = points[ip + 1 :]
 
+                consistent_flag = True
                 for i in range(1, len(new_sub_points)):
                     if np.sum(np.abs(new_sub_points[i - 1] - new_sub_points[i])) != 1:
-                        continue
+                        consistent_flag = False
+                        break
 
-                new_score = evaluate_points(new_sub_points, image_lut)
-                if new_score < score:
-                    points = np.concatenate((pre_points, new_sub_points, post_points))
+                if consistent_flag:
+                    new_score = evaluate_points(new_sub_points, image_lut)
+                    if new_score < score:
+                        points = np.concatenate(
+                            (pre_points, new_sub_points, post_points)
+                        )
 
-                    idx = len(pre_points)
-                    for p in new_sub_points:
-                        idx_mat[p[1] + radius][p[0] + radius] = idx
-                        idx += 1
+                        idx = len(pre_points)
+                        for p in new_sub_points:
+                            idx_mat[p[1] + radius][p[0] + radius] = idx
+                            idx += 1
 
         return points, idx_mat
 
