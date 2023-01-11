@@ -467,9 +467,11 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
                 if consistent_flag:
                     new_score = evaluate_points(new_sub_points, image_lut)
                     if new_score < score:
-                        points = np.concatenate(
+                        tmp_points = np.concatenate(
                             (pre_points, new_sub_points, post_points)
                         )
+                        if len(tmp_points) == 65988:
+                            points = tmp_points
 
                         idx = len(pre_points)
                         for p in new_sub_points:
