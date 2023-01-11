@@ -558,12 +558,15 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
             and idx_mat[y + 1 + radius][x + radius] >= 0
             and idx_mat[y + 1 + radius][x + 1 + radius] >= 0
         ):
-            points, idx_mat = four_opt(x, y, radius, idx_mat, points, image_lut)
-            assert len(points) == 65988, (x, y)
-            assert (
-                len(set([(p[0], p[1]) for p in points.tolist()] + start_points))
+            new_points, idx_mat = four_opt(
+                x, y, radius, idx_mat, points.copy(), image_lut
+            )
+            # assert len(points) == 65988, (x, y)
+            if (
+                len(set([(p[0], p[1]) for p in new_points.tolist()] + start_points))
                 == 66049
-            ), (x, y)
+            ):
+                points = new_points
 
     best_points = points
 
