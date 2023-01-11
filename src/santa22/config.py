@@ -560,6 +560,10 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
         ):
             points, idx_mat = four_opt(x, y, radius, idx_mat, points, image_lut)
             assert len(points) == 65988, (x, y)
+            assert (
+                len(set([(p[0], p[1]) for p in points.tolist()] + start_points))
+                == 66049
+            ), (x, y)
 
     best_points = points
 
