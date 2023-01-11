@@ -458,11 +458,11 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
                     pre_points = points[:el]
                     post_points = points[ip + 1 :]
 
-                consistent_flag = True
-                for i in range(1, len(new_sub_points)):
-                    if np.sum(np.abs(new_sub_points[i - 1] - new_sub_points[i])) != 1:
-                        consistent_flag = False
-                        break
+                consistent_flag = (np.abs(new_sub_points[:-1] - new_sub_points[1:]).sum(axis=1) == 1).all()
+                # for i in range(1, len(new_sub_points)):
+                #     if np.sum(np.abs(new_sub_points[i - 1] - new_sub_points[i])) != 1:
+                #         consistent_flag = False
+                #        break
 
                 if consistent_flag:
                     new_score = evaluate_points(new_sub_points, image_lut)
@@ -578,7 +578,7 @@ def local_search(image_lut, max_itr=10, t_start=0.3, t_end=0.001):
     ]
     best_config = np.concatenate([start_config, best_config, back_config])
     best_config = run_remove(best_config)
-    # best_config = run_remove(best_config)
+    best_config = run_remove(best_config)
 
     return (
         best_config,
