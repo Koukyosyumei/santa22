@@ -349,13 +349,21 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
         return points, idx_mat
     else:
         if x > 0 and y >= 0:
-            rag = range(1, radius)
+            rag = np.random.choice(
+                np.arange(1, radius), radius - 1, replace=False
+            )  # range(1, radius)
         elif x <= 0 and y > 0:
-            rag = range(-radius, 0)
+            rag = np.random.choice(
+                np.arange(-radius, 0), radius, replace=False
+            )  # range(-radius, 0)
         elif x >= 0 and y < 0:
-            rag = range(0, radius)
+            rag = np.random.choice(
+                np.arange(0, radius), radius, replace=False
+            )  # range(0, radius)
         else:
-            rag = range(-radius, -1)
+            rag = np.random.choice(
+                np.arange(-radius, -1), radius - 1, replace=False
+            )  # range(-radius, -1)
 
         for x_ in rag:
             if x == x_:
@@ -458,7 +466,9 @@ def four_opt(x, y, radius, idx_mat, points, image_lut):
                     pre_points = points[:el]
                     post_points = points[ip + 1 :]
 
-                consistent_flag = (np.abs(new_sub_points[:-1] - new_sub_points[1:]).sum(axis=1) == 1).all()
+                consistent_flag = (
+                    np.abs(new_sub_points[:-1] - new_sub_points[1:]).sum(axis=1) == 1
+                ).all()
                 # for i in range(1, len(new_sub_points)):
                 #     if np.sum(np.abs(new_sub_points[i - 1] - new_sub_points[i])) != 1:
                 #         consistent_flag = False
