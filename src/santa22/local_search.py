@@ -1,9 +1,11 @@
+import os
+import pickle
 import random
 
 from tqdm import tqdm
 
 from .cost import evaluate_config
-from .tsp import double_bridge, three_opt, two_opt
+from .tsp import double_bridge, three_opt, two_opt, two_opt_greedy
 from .utils import run_remove
 
 offset_choice = list(range(1, 21))
@@ -31,25 +33,45 @@ offset_choice_weight = [
 ]
 
 
-def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
+def local_search(config, image_lut, output_dir, max_itr=10, t_start=0.3, t_end=0.001):
     config = run_remove(config)
+    config = run_remove(config)
+    removed_duplicate_score = evaluate_config(config, image_lut)
+    print("remove duplicates: ", removed_duplicate_score)
+    with open(
+        os.path.join(output_dir, f"initial_path_{removed_duplicate_score}.pickle"),
+        mode="wb",
+    ) as f:
+        pickle.dump(config, f)
+
+    """
+    config = two_opt_greedy(
+        config,
+        image_lut,
+        random.sample(list(range(1, len(config))), len(config) - 1),
+        2,
+    )
+    """
+
     initial_score = evaluate_config(config, image_lut)
     current_score = initial_score
     best_score = initial_score
-    print("initial score is ", current_score)
+    print("greedy two-opt: ", current_score)
 
     f = open("offset.csv", "w")
 
     tolerance_cnt = 0
 
     for itr in tqdm(range(max_itr)):
-        offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
 
-        if itr % 3 == 0:
+        if itr % 2 == 0:
+            offset_1 = random.choices(offset_choice, weights=offset_choice_weight)[0]
+            offset_2 = random.choices(offset_choice, weights=offset_choice_weight)[0]
             config_new, improve_score, improve_flag = three_opt(
-                config, offset, image_lut, t_start, t_end, itr, max_itr
+                config, offset_1, offset_2, image_lut, t_start, t_end, itr, max_itr
             )
         else:
+            offset = random.choices(offset_choice, weights=offset_choice_weight)[0]
             config_new, improve_score, improve_flag = two_opt(
                 config, offset, image_lut, t_start, t_end, itr, max_itr
             )
@@ -79,6 +101,7 @@ def local_search(config, image_lut, max_itr=10, t_start=0.3, t_end=0.001):
 
     f.close()
 
+    best_config = run_remove(config)
     best_config = run_remove(best_config)
     final_score = evaluate_config(best_config, image_lut)
 

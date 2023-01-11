@@ -1,17 +1,11 @@
-import os
 import random
 
 import numpy as np
+from numba import njit
+from tqdm import tqdm
 
 from .cost import color_cost
-from .unionfind import UnionFind
-from .utils import (
-    config_to_string,
-    get_path_to_configuration,
-    get_path_to_point,
-    get_position,
-    rotate,
-)
+from .utils import get_path_to_configuration, get_path_to_point, get_position, rotate
 
 
 class TopKStorage:
@@ -43,11 +37,245 @@ class TopKStorage:
         return len(self.list_obj) == 0
 
 
+@njit
+def single_link_step(
+    origin, config, base, base_arr, radius, image, unvisited, below, cost, found
+):
+    config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
+
+    for i in range(len(origin)):  # for each arm link
+        for d in [-1, 1]:  # for each direction
+            # Rotate link and get new position and vertical displacement:
+            config_cur = rotate(config, i, d)
+            pos = get_position(config_cur)
+            dy = pos[1] - base[1]
+
+            # Convert from cartesian to array coordinates and measure cost:
+            pos_arr = (pos[0] + radius, pos[1] + radius)
+            cost_cur = 1 + color_cost(base_arr, pos_arr, image)
+
+            # Must move down unless impossible:
+            if (
+                unvisited[pos_arr]
+                and cost_cur <= cost
+                and (dy < 0 or (dy >= 0 and below == 0))
+            ):
+                if cost_store_init:
+                    cost_store.pop()
+                    cost_store_init = False
+
+                if cost_cur == cost:
+                    cost_store.append(config_cur.copy())
+                else:
+                    cost_store = [config_cur.copy()]
+
+                cost = cost_cur
+                found = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
+
+    return config_next, cost, found
+
+
+@njit
+def double_link_step(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    # Rotate two separate links, get position and vertical displacement:
+                    config_cur = rotate(config, i, d1)
+                    config_cur = rotate(config_cur, j, d2)
+                    pos = get_position(config_cur)
+                    dy = pos[1] - base[1]
+
+                    # Convert from cartesian to array coordinates and measure cost:
+                    pos_arr = (pos[0] + radius, pos[1] + radius)
+                    cost_cur = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
+
+                    # Must move down unless impossible:
+                    if unvisited[pos_arr] and cost_cur < cost:
+                        if cost_store_init:
+                            cost_store.pop()
+                            cost_store_init = False
+
+                        if cost_cur == cost:
+                            cost_store.append(config_cur.copy())
+                        else:
+                            cost_store = [config_cur.copy()]
+
+                        cost = cost_cur
+                        found = True
+                        update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
+
+    return update, config_next, cost, found
+
+
+@njit
+def triple_link_step(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    for k in range(j + 1, len(origin)):
+                        for d3 in [-1, 1]:
+                            # Rotate three separate links, get position and vertical displacement:
+                            config_cur = rotate(config, i, d1)
+                            config_cur = rotate(config_cur, j, d2)
+                            config_cur = rotate(config_cur, k, d3)
+                            pos = get_position(config_cur)
+                            dy = pos[1] - base[1]
+
+                            # Convert from cartesian to array coordinates and measure cost:
+                            pos_arr = (pos[0] + radius, pos[1] + radius)
+                            cost_cur = np.sqrt(3) + color_cost(base_arr, pos_arr, image)
+
+                            # Must move down unless impossible:
+                            if unvisited[pos_arr] and cost_cur < cost:
+                                if cost_store_init:
+                                    cost_store.pop()
+                                    cost_store_init = False
+
+                                if cost_cur == cost:
+                                    cost_store.append(config_cur.copy())
+                                else:
+                                    cost_store = [config_cur.copy()]
+
+                                cost = cost_cur
+                                found = True
+                                update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
+
+    return update, config_next, cost, found
+
+
+@njit
+def four_link_step(
+    origin, config, base, base_arr, radius, image, unvisited, cost, found
+):
+    config_next = config.copy()
+    cost_store = [config.copy()]
+    cost_store_init = True
+    update = False
+
+    for i in range(len(origin) - 1):
+        for d1 in [-1, 1]:
+            config_cur_1 = rotate(config, i, d1)
+            for j in range(i + 1, len(origin)):
+                for d2 in [-1, 1]:
+                    config_cur_2 = rotate(config_cur_1, j, d2)
+                    for k in range(j + 1, len(origin)):
+                        for d3 in [-1, 1]:
+                            config_cur_3 = rotate(config_cur_2, k, d3)
+                            for l in range(j + 1, len(origin)):
+                                for d4 in [-1, 1]:
+                                    # Rotate three separate links, get position and vertical displacement:
+                                    config_cur = rotate(config_cur_3, l, d4)
+                                    pos = get_position(config_cur)
+                                    dy = pos[1] - base[1]
+
+                                    # Convert from cartesian to array coordinates and measure cost:
+                                    pos_arr = (pos[0] + radius, pos[1] + radius)
+                                    cost_cur = np.sqrt(4) + color_cost(
+                                        base_arr, pos_arr, image
+                                    )
+
+                                    # Must move down unless impossible:
+                                    if unvisited[pos_arr] and cost_cur < cost:
+                                        if cost_store_init:
+                                            cost_store.pop()
+                                            cost_store_init = False
+
+                                        if cost_cur == cost:
+                                            cost_store.append(config_cur.copy())
+                                        else:
+                                            cost_store = [config_cur.copy()]
+
+                                        cost = cost_cur
+                                        found = True
+                                        update = True
+
+    if not cost_store_init:
+        config_next = cost_store[random.randint(0, len(cost_store) - 1)]
+
+    return update, config_next, cost, found
+
+
+@njit
+def twopart(n):
+    return n & (n - 1) == 0
+
+
+@njit
+def find_near(side, unvisited, base_arr, radius, distance):
+    # Go to the nearest unvisited point:
+
+    k = 2
+    list_obj = [np.array((-1000, -1000))]
+    list_score = [100000.00]
+    list_init = True
+
+    for i in range(side):
+        for j in range(side):
+            if unvisited[(i, j)]:
+
+                # Measure the distance to the current point and choose the nearest one:
+                penalty = 1
+                p = 0.16  # 0.1 - 79200
+                if twopart(base_arr[0] - i):
+                    penalty += p
+                if twopart(base_arr[1] - j):
+                    penalty += p
+                distance2 = penalty * np.sqrt(
+                    (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
+                )
+
+                if distance2 < distance:
+                    point = (i - radius, j - radius)
+                    distance = distance2
+
+                    if list_init:
+                        list_obj.pop(0)
+                        list_score.pop(0)
+                        list_init = False
+
+                    if len(list_obj) < k:
+                        list_obj.append(np.array((i - radius, j - radius)))
+                        list_score.append(distance2)
+                    else:
+                        if distance2 < np.max(np.array(list_score)):
+                            max_idx = np.argmax(np.array(list_score))
+                            list_obj.pop(max_idx)
+                            list_obj.append(np.array((i - radius, j - radius)))
+                            list_score.pop(max_idx)
+                            list_score.append(distance2)
+
+    return point, list_obj, list_score
+
+
 def travel_map(df_image, output_dir, epsilon=0.0):
-
-    utree = UnionFind(df_image.shape[0])
-
-    path_result = []
 
     side = df_image.x.nunique()
     radius = df_image.x.max()
@@ -72,16 +300,8 @@ def travel_map(df_image, output_dir, epsilon=0.0):
     ]  # origin configuration
     config = origin.copy()  # future configuration
 
-    # Output header and origin configuration:
-    f = open(os.path.join(output_dir, "submission.csv"), "w")
-    print("configuration", file=f)  # header
-    print(config_to_string(origin), file=f)  # origin configuration
-    path_result.append(origin.copy())
-
-    # Output arrows for visualization:
-    a = open(os.path.join(output_dir, "arrows.csv"), "w")
-    print("x,y,dx,dy", file=a)  # header
-
+    result = [config]
+    pbar = tqdm(total=total)
     # Continue until all locations have been visited:
     while total:
 
@@ -101,123 +321,90 @@ def travel_map(df_image, output_dir, epsilon=0.0):
         else:
             below = unvisited[(base_arr[0], base_arr[1] - 1)]
 
-        # storage = TopKStorage()
-
         # Single-link step:
-        for i in range(len(origin)):  # for each arm link
-            for d in [-1, 1]:  # for each direction
-                # Rotate link and get new position and vertical displacement:
-                config2 = rotate(np.array(config), i, d)
-                pos = get_position(np.array(config2))
-                dy = pos[1] - base[1]
-
-                # Convert from cartesian to array coordinates and measure cost:
-                pos_arr = (pos[0] + radius, pos[1] + radius)
-                cost2 = 1 + color_cost(base_arr, pos_arr, image)
-
-                # Must move down unless impossible:
-                if (
-                    unvisited[pos_arr]
-                    and cost2 < cost
-                    and (dy < 0 or (dy >= 0 and below == 0))
-                    and (
-                        not utree.same(
-                            (pos_arr[0]) * side + (pos_arr[1]),
-                            (base_arr[0]) * side + (base_arr[1]),
-                        )
-                    )
-                ):
-                    # storage.push(config2.copy(), cost2)
-                    config_next = config2.copy()
-                    cost = cost2
-                    found = True
+        config_next, cost, found = single_link_step(
+            np.array(origin),
+            np.array(config),
+            base,
+            base_arr,
+            radius,
+            image,
+            unvisited,
+            below,
+            cost,
+            found,
+        )
 
         if below == 0:
             # Double-link step:
-            for i in range(len(origin) - 1):
-                for d1 in [-1, 1]:
-                    for j in range(i + 1, len(origin)):
-                        for d2 in [-1, 1]:
-                            # Rotate two separate links, get position and vertical displacement:
-                            config2 = rotate(np.array(config), i, d1)
-                            config2 = rotate(np.array(config2), j, d2)
-                            pos = get_position(np.array(config2))
-                            dy = pos[1] - base[1]
+            update, tmp_config_next, tmp_cost, tmp_found = double_link_step(
+                np.array(origin),
+                np.array(config),
+                base,
+                base_arr,
+                radius,
+                image,
+                unvisited,
+                cost,
+                found,
+            )
 
-                            # Convert from cartesian to array coordinates and measure cost:
-                            pos_arr = (pos[0] + radius, pos[1] + radius)
-                            cost2 = np.sqrt(2) + color_cost(base_arr, pos_arr, image)
+            if update:
+                config_next = tmp_config_next.copy()
+                cost = tmp_cost
+                found = tmp_found
 
-                            # Must move down unless impossible:
-                            if (
-                                unvisited[pos_arr]
-                                and cost2 < cost
-                                and below == 0
-                                and (
-                                    not utree.same(
-                                        (pos_arr[0]) * side + (pos_arr[1]),
-                                        (base_arr[0]) * side + (base_arr[1]),
-                                    )
-                                )
-                            ):
-                                # storage.push(config2.copy(), cost2)
-                                config_next = config2.copy()
-                                cost = cost2
-                                found = True
+            # Tripple-link step:
+            update, tmp_config_next, tmp_cost, tmp_found = triple_link_step(
+                np.array(origin),
+                np.array(config),
+                base,
+                base_arr,
+                radius,
+                image,
+                unvisited,
+                cost,
+                found,
+            )
+
+            if update:
+                config_next = tmp_config_next.copy()
+                cost = tmp_cost
+                found = tmp_found
+
+            # Four-link step:
+            update, tmp_config_next, tmp_cost, tmp_found = four_link_step(
+                np.array(origin),
+                np.array(config),
+                base,
+                base_arr,
+                radius,
+                image,
+                unvisited,
+                cost,
+                found,
+            )
+
+            if update:
+                config_next = tmp_config_next.copy()
+                cost = tmp_cost
+                found = tmp_found
 
         # If an unvisited point was found, we are done for this step:
         if found:
-            # if random.random() < epsilon and (not storage.empty()):
-            #    config = storage.sample()
-            # else:
             config = config_next.copy()
             pos = get_position(np.array(config))
             total -= 1
-
-            # Print configuration and arrows:
-            print(config_to_string(config), file=f)
-            path_result.append(config.copy())
-            print(
-                base[0],
-                ",",
-                base[1],
-                ",",
-                pos[0] - base[0],
-                ",",
-                pos[1] - base[1],
-                file=a,
-            )
-
-            utree.union(
-                (pos[0] + radius) * side + (pos[1] + radius),
-                (base[0] + radius) * side + (base[1] + radius),
-            )
+            pbar.update(1)
+            result.append(config)
 
         # Otherwise, find the nearest unvisited point and go there ignoring the travel map:
         else:
             # Search every single pixel of the travel map for unvisited points:
-            storage = TopKStorage()
-            for i in range(side):
-                for j in range(side):
-                    if unvisited[(i, j)]:
+            point, list_obj, _ = find_near(side, unvisited, base_arr, radius, distance)
+            if random.random() < epsilon and len(list_obj) != 0:
+                point = list_obj[random.randint(0, len(list_obj) - 1)]
 
-                        # Measure the distance to the current point and choose the nearest one:
-                        distance2 = np.sqrt(
-                            (base_arr[0] - i) ** 2 + (base_arr[1] - j) ** 2
-                        )
-                        if distance2 < distance and (
-                            not utree.same(
-                                i * side + j,
-                                (base_arr[0]) * side + (base_arr[1]),
-                            )
-                        ):
-                            storage.push((i - radius, j - radius), distance2)
-                            point = (i - radius, j - radius)
-                            distance = distance2
-
-            # Go to the nearest unvisited point:
-            if random.random() < epsilon and (not storage.empty()):
-                point = storage.sample()
             path = get_path_to_point(np.array(config), np.array(point))[1:]
 
             # Output shortest trajectory:
@@ -229,46 +416,17 @@ def travel_map(df_image, output_dir, epsilon=0.0):
                 if unvisited[pos_arr]:
                     unvisited[pos_arr] = 0
                     total -= 1
+                    pbar.update(1)
 
-                # Print configuration and arrows:
-                print(config_to_string(config), file=f)
-                path_result.append(config.copy())
-                print(
-                    base[0],
-                    ",",
-                    base[1],
-                    ",",
-                    pos[0] - base[0],
-                    ",",
-                    pos[1] - base[1],
-                    file=a,
-                )
-
-                utree.union(
-                    (pos[0] + radius) * side + (pos[1] + radius),
-                    (base[0] + radius) * side + (base[1] + radius),
-                )
+                result.append(config)
 
                 base = pos
 
+    pbar.close()
+
     # Return to origin:
-    base = get_position(np.array(config))
     path = get_path_to_configuration(np.array(config), np.array(origin))[1:]
 
-    # Output return trajectory:
-    for config in path:
-        pos = get_position(np.array(config))
+    result.extend(path)
 
-        # Print configuration and arrows:
-        print(config_to_string(config), file=f)
-        path_result.append(config.copy())
-        print(
-            base[0], ",", base[1], ",", pos[0] - base[0], ",", pos[1] - base[1], file=a
-        )
-        base = pos
-
-    # Close output files:
-    f.close()
-    a.close()
-
-    return path_result
+    return result

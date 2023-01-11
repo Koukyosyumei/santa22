@@ -44,12 +44,12 @@ def double_bridge(config):
 
 
 @njit
-def three_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
+def three_opt(config, offset_1, offset_2, image_lut, t_start, t_end, itr, max_itr):
     # offset = 1  # TODO support larger offset
 
-    i = random.randint(1, len(config) - (3 + 2 * offset))
-    j = i + offset + 1
-    k = j + offset + 1
+    i = random.randint(1, len(config) - (3 + offset_1 + offset_2))
+    j = i + offset_1 + 1
+    k = j + offset_2 + 1
 
     d_AB = evaluate_config(config[i - 1 : i + 1], image_lut)
     d_CD = evaluate_config(config[j - 1 : j + 1], image_lut)
@@ -193,3 +193,44 @@ def two_opt(config, offset, image_lut, t_start, t_end, itr, max_itr):
         )
 
     return config, 0, False
+
+
+@njit
+def two_opt_greedy(config, image_lut, randomized_order, max_itr=1):
+    N = len(config)
+    itr = 0
+    cnt = 0
+
+    while itr < max_itr:
+        improve = False
+        for i in randomized_order:
+            for j in range(i + 2, min(i + 200, N)):
+                p_AC = get_path_to_configuration(config[i - 1], config[j - 1])
+                p_BD = get_path_to_configuration(config[i], config[j])
+
+                d_AB = evaluate_config(config[i - 1 : i + 1], image_lut)
+                d_CD = evaluate_config(config[j - 1 : j + 1], image_lut)
+                d_AC = evaluate_config(p_AC, image_lut)
+                d_BD = evaluate_config(p_BD, image_lut)
+
+                d0 = d_AB + d_CD
+                d1 = d_AC + d_BD
+
+                p_CB = config[i:j][::-1]
+
+                if d0 > d1:
+                    config = np.concatenate(
+                        (config[:i], p_AC, p_CB[1:], p_BD[1:], config[j + 1 :])
+                    )
+                    improve = True
+
+            cnt += 1
+            if (cnt + 1) % 5000 == 0:
+                print(cnt, evaluate_config(config, image_lut))
+
+        itr += 1
+
+        if not improve:
+            break
+
+    return config
